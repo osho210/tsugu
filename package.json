@@ -9,7 +9,9 @@
     "prepare": "husky",
     "lint:fix": "eslint . --fix",
     "lint": "eslint",
-    "deadCode": "knip"
+    "deadCode": "knip",
+    "commit": "cz",
+    "push": "node scripts/push.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [
@@ -19,6 +21,11 @@
     "*.{json,md,yml,yaml,css,scss}": [
       "prettier --write"
     ]
+  },
+  "config": {
+    "commitizen": {
+      "path": "./commitizen/index.cjs"
+    }
   },
   "keywords": [],
   "author": "",
@@ -34,7 +41,9 @@
   "type": "module",
   "devDependencies": {
     "@eslint/js": "^9.39.5",
+    "@inquirer/prompts": "^8.7.0",
     "@stylistic/eslint-plugin": "^5.10.0",
+    "commitizen": "^4.3.2",
     "eslint": "^9.39.5",
     "eslint-config-next": "16.3.3",
     "eslint-config-prettier": "^10.1.8",
