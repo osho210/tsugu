@@ -260,16 +260,46 @@ ${commits
   .map((commit) => `- ${commit}`)
   .join('\n')}`;
 
-    const pattern = /## Commits\n[\s\S]*?(?=\n## |\s*$)/;
+    const lines = body
+        .replace(/\r\n/g, '\n')
+        .split('\n');
 
-    if (pattern.test(body)) {
-        return body.replace(pattern, commitsSection);
+    const result = [];
+
+    let skippingCommits = false;
+    let commitsInserted = false;
+
+    for (const line of lines) {
+        if (/^## Commits\s*$/.test(line)) {
+            if (!commitsInserted) {
+                result.push(commitsSection);
+                commitsInserted = true;
+            }
+
+            skippingCommits = true;
+            continue;
+        }
+
+        if (skippingCommits) {
+            if (/^##\s+/.test(line)) {
+                skippingCommits = false;
+                result.push(line);
+            }
+
+            continue;
+        }
+
+        result.push(line);
     }
 
-    return `${body.trim()}
+    if (!commitsInserted) {
+        result.push('', commitsSection);
+    }
 
-${commitsSection}
-`;
+    return `${result
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim()}\n`;
 }
 
 function savePrBody(body) {
@@ -448,8 +478,7 @@ console.log('--------------------------------\n');
 
 const shouldProceed = await confirm({
     message: existingPr ?
-        'pushしてPRを更新しますか？' :
-        'pushしてPRを作成しますか？',
+        'pushしてPRを更新しますか？' : 'pushしてPRを作成しますか？',
     default: true,
 });
 
