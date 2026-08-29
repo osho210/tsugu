@@ -2,11 +2,23 @@
   "name": "tsugu",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
     "db:prepare": "pnpm db:emit && pnpm --filter api exec prisma migration plan",
     "prisma:status": "pnpm --filter api exec prisma migration status",
-    "prisma:migrate": "pnpm --filter api exec prisma migrate"
+    "prisma:migrate": "pnpm --filter api exec prisma db migrate",
+    "prepare": "husky",
+    "lint:fix": "eslint . --fix",
+    "lint": "eslint",
+    "deadCode": "knip"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css,scss}": [
+      "prettier --write"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -19,5 +31,19 @@
     }
   },
   "packageManager": "pnpm@11.24.0",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.3.3",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-simple-import-sort": "^14.0.0",
+    "globals": "^17.11.0",
+    "husky": "^9.1.7",
+    "knip": "^6.32.3",
+    "lint-staged": "^17.4.1",
+    "prettier": "^3.9.6",
+    "typescript-eslint": "^8.68.0"
+  }
 }
