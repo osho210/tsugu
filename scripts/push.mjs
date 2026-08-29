@@ -265,15 +265,19 @@ function savePrBody(body) {
     return path;
 }
 
-function getExistingPrUrl() {
-    return tryCommand('gh', [
+function getExistingPr() {
+    const result = tryCommand('gh', [
         'pr',
         'view',
         '--json',
-        'url',
-        '--jq',
-        '.url',
+        'number,url',
     ]);
+
+    if (!result) {
+        return null;
+    }
+
+    return JSON.parse(result);
 }
 
 function createPullRequest({
@@ -293,6 +297,27 @@ function createPullRequest({
             base,
             '--head',
             branch,
+            '--title',
+            title,
+            '--body-file',
+            bodyPath,
+        ], {
+            stdio: ['inherit', 'pipe', 'inherit'],
+        },
+    );
+}
+
+function updatePullRequest({
+    number,
+    title,
+    bodyPath,
+}) {
+    return runCommand(
+        'gh',
+        [
+            'pr',
+            'edit',
+            String(number),
             '--title',
             title,
             '--body-file',
@@ -382,7 +407,7 @@ console.log(title.trim());
 console.log('--------------------------------\n');
 
 const shouldProceed = await confirm({
-    message: 'pushしてPRを作成しますか？',
+    message: 'pushしてPRを作成・更新しますか？',
     default: true,
 });
 
@@ -408,18 +433,7 @@ if (hasUpstream) {
 }
 
 /**
- * 2. 既存PR確認
- */
-const existingPrUrl = getExistingPrUrl();
-
-if (existingPrUrl) {
-    console.log('\n既にPRが存在します。');
-    console.log(existingPrUrl);
-    process.exit(0);
-}
-
-/**
- * 3. PRには「今回のpush」ではなく
+ * 2. PRには「今回のpush」ではなく
  * branch全体のcommitを載せる。
  */
 const allCommits =
@@ -433,7 +447,7 @@ if (!allCommits) {
 }
 
 /**
- * 4. PR本文生成
+ * 3. PR本文生成
  */
 const body = buildPrBody({
     description: description.trim(),
@@ -443,14 +457,27 @@ const body = buildPrBody({
 const bodyPath = savePrBody(body);
 
 /**
- * 5. PR作成
+ * 4. PR作成・更新
  */
-const prUrl = createPullRequest({
-    branch,
-    baseBranch: comparisonBase,
-    title: title.trim(),
-    bodyPath,
-});
+const existingPr = getExistingPr();
 
-console.log('\n✅ push / PR作成が完了しました。');
-console.log(prUrl);
+if (existingPr) {
+    updatePullRequest({
+        number: existingPr.number,
+        title: title.trim(),
+        bodyPath,
+    });
+
+    console.log('\n✅ push / PR更新が完了しました。');
+    console.log(existingPr.url);
+} else {
+    const prUrl = createPullRequest({
+        branch,
+        baseBranch: comparisonBase,
+        title: title.trim(),
+        bodyPath,
+    });
+
+    console.log('\n✅ push / PR作成が完了しました。');
+    console.log(prUrl);
+}
