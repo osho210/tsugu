@@ -6,7 +6,17 @@
   "scripts": {
     "db:prepare": "pnpm db:emit && pnpm --filter api exec prisma migration plan",
     "prisma:status": "pnpm --filter api exec prisma migration status",
-    "prisma:migrate": "pnpm --filter api exec prisma migrate"
+    "prisma:migrate": "pnpm --filter api exec prisma migrate",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css,scss}": [
+      "prettier --write"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -19,5 +29,11 @@
     }
   },
   "packageManager": "pnpm@11.24.0",
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.4.1",
+    "prettier": "^3.9.6"
+  }
 }
