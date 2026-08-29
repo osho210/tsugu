@@ -1,0 +1,8 @@
+node_modules
+.next
+dist
+coverage
+.turbo
+
+apps/api/src/prisma/contract.json
+apps/api/src/prisma/contract.d.ts
