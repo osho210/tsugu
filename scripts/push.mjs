@@ -8,6 +8,7 @@ import {
 } from 'node:child_process';
 import {
     mkdirSync,
+    readFileSync,
     writeFileSync
 } from 'node:fs';
 import {
@@ -250,6 +251,27 @@ ${commits
 `;
 }
 
+function updateCommitsSection(body, commits) {
+    const commitsSection = `## Commits
+
+${commits
+  .split('\n')
+  .filter(Boolean)
+  .map((commit) => `- ${commit}`)
+  .join('\n')}`;
+
+    const pattern = /## Commits\n[\s\S]*?(?=\n## |\s*$)/;
+
+    if (pattern.test(body)) {
+        return body.replace(pattern, commitsSection);
+    }
+
+    return `${body.trim()}
+
+${commitsSection}
+`;
+}
+
 function savePrBody(body) {
     const gitDir = runGit(['rev-parse', '--git-dir']);
     const dir = join(gitDir, 'tsugu');
@@ -270,7 +292,7 @@ function getExistingPr() {
         'pr',
         'view',
         '--json',
-        'number,url',
+        'number,url,title,body',
     ]);
 
     if (!result) {
@@ -312,16 +334,19 @@ function updatePullRequest({
     title,
     bodyPath,
 }) {
+    const body = readFileSync(bodyPath, 'utf8');
+
     return runCommand(
         'gh',
         [
-            'pr',
-            'edit',
-            String(number),
-            '--title',
-            title,
-            '--body-file',
-            bodyPath,
+            'api',
+            '--method',
+            'PATCH',
+            `repos/{owner}/{repo}/pulls/${number}`,
+            '-f',
+            `title=${title}`,
+            '-f',
+            `body=${body}`,
         ], {
             stdio: ['inherit', 'pipe', 'inherit'],
         },
@@ -368,26 +393,39 @@ console.log(`\n現在branch: ${branch}`);
 console.log(`PR base:     ${comparisonBase}`);
 console.log(`push先:      ${remote}/${branch}`);
 
-const description = await input({
-    message: 'PRの変更概要を入力してください:',
-    validate(value) {
-        return (
-            value.trim().length > 0 ||
-            '変更概要を入力してください'
-        );
-    },
-});
+const existingPr = getExistingPr();
 
-const title = await input({
-    message: 'PRタイトル:',
-    default: description.trim(),
-    validate(value) {
-        return (
-            value.trim().length > 0 ||
-            'PRタイトルを入力してください'
-        );
-    },
-});
+let description;
+let title;
+
+if (existingPr) {
+    title = existingPr.title;
+
+    console.log('\n既存PRを更新します。');
+    console.log(existingPr.url);
+    console.log(`PR Title: ${existingPr.title}`);
+} else {
+    description = await input({
+        message: 'PRの変更概要を入力してください:',
+        validate(value) {
+            return (
+                value.trim().length > 0 ||
+                '変更概要を入力してください'
+            );
+        },
+    });
+
+    title = await input({
+        message: 'PRタイトル:',
+        default: description.trim(),
+        validate(value) {
+            return (
+                value.trim().length > 0 ||
+                'PRタイトルを入力してください'
+            );
+        },
+    });
+}
 
 console.log('\n--------------------------------');
 console.log('Push / Pull Request');
@@ -395,19 +433,23 @@ console.log('--------------------------------');
 console.log(`Branch: ${branch}`);
 console.log(`Base:   ${comparisonBase}`);
 
-console.log('\nDescription');
-console.log(description.trim());
+if (!existingPr) {
+    console.log('\nDescription');
+    console.log(description.trim());
+}
 
 console.log('\nCommits');
 console.log(commits);
 
-console.log(`\nPR Title`);
+console.log('\nPR Title');
 console.log(title.trim());
 
 console.log('--------------------------------\n');
 
 const shouldProceed = await confirm({
-    message: 'pushしてPRを作成・更新しますか？',
+    message: existingPr ?
+        'pushしてPRを更新しますか？' :
+        'pushしてPRを作成しますか？',
     default: true,
 });
 
@@ -449,22 +491,25 @@ if (!allCommits) {
 /**
  * 3. PR本文生成
  */
-const body = buildPrBody({
-    description: description.trim(),
-    commits: allCommits,
-});
+const body = existingPr ?
+    updateCommitsSection(
+        existingPr.body,
+        allCommits,
+    ) :
+    buildPrBody({
+        description: description.trim(),
+        commits: allCommits,
+    });
 
 const bodyPath = savePrBody(body);
 
 /**
  * 4. PR作成・更新
  */
-const existingPr = getExistingPr();
-
 if (existingPr) {
     updatePullRequest({
         number: existingPr.number,
-        title: title.trim(),
+        title: existingPr.title,
         bodyPath,
     });
 
