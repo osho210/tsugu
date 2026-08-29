@@ -2,14 +2,14 @@
   "name": "tsugu",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
     "db:prepare": "pnpm db:emit && pnpm --filter api exec prisma migration plan",
     "prisma:status": "pnpm --filter api exec prisma migration status",
-    "prisma:migrate": "pnpm --filter api exec prisma migrate",
+    "prisma:migrate": "pnpm --filter api exec prisma db migrate",
     "prepare": "husky",
     "lint:fix": "eslint . --fix",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deadCode": "knip"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

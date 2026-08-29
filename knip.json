@@ -1,0 +1,12 @@
+{
+  "workspaces": {
+    "apps/api": {
+      "entry": ["src/main.ts", "test/**/*.ts", "src/prisma/db.ts"],
+      "project": ["src/**/*.{ts,tsx}", "test/**/*.ts"]
+    },
+    "apps/web": {
+      "entry": ["src/app/**/*.{ts,tsx}"],
+      "project": ["src/**/*.{ts,tsx}"]
+    }
+  }
+}
