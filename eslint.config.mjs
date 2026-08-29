@@ -1,6 +1,7 @@
 // @ts-check
 
 import eslint from '@eslint/js';
+import stylistic from '@stylistic/eslint-plugin';
 import {
     defineConfig,
     globalIgnores
@@ -19,7 +20,6 @@ export default defineConfig([
         '**/build/**',
         '**/coverage/**',
         '**/.turbo/**',
-
         '**/next-env.d.ts',
 
         // Prisma generated files
@@ -27,7 +27,7 @@ export default defineConfig([
         'apps/api/src/prisma/contract.json',
         'apps/api/migrations/**',
 
-        // 各appに残っている旧ESLint config
+        // 各 app に残っている旧 ESLint config
         'apps/*/eslint.config.mjs',
     ]),
 
@@ -53,7 +53,10 @@ export default defineConfig([
 
     // API
     {
-        files: ['apps/api/src/**/*.{js,ts}', 'apps/api/test/**/*.{js,ts}'],
+        files: [
+            'apps/api/src/**/*.{js,ts}',
+            'apps/api/test/**/*.{js,ts}',
+        ],
 
         extends: [
             eslint.configs.recommended,
@@ -80,5 +83,35 @@ export default defineConfig([
         },
     },
 
+    // Prisma CLI config
+    {
+        files: ['apps/api/prisma.config.ts'],
+
+        extends: [
+            eslint.configs.recommended,
+            ...tseslint.configs.recommended,
+        ],
+
+        languageOptions: {
+            globals: {
+                ...globals.node,
+            },
+        },
+    },
+
+    // Prettierとの競合ルールを無効化
     eslintConfigPrettier,
+
+    // Web / API 共通の強制ルール
+    {
+        files: ['apps/**/*.{js,jsx,ts,tsx}'],
+
+        plugins: {
+            '@stylistic': stylistic,
+        },
+
+        rules: {
+            '@stylistic/eol-last': ['error', 'always'],
+        },
+    },
 ]);
