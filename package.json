@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "db:prepare": "pnpm db:emit && pnpm --filter api exec prisma migration plan",
+    "prisma:status": "pnpm --filter api exec prisma migration status",
+    "prisma:migrate": "pnpm --filter api exec prisma migrate"
   },
   "keywords": [],
   "author": "",
