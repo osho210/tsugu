@@ -164,18 +164,14 @@ async function selectBaseBranch(currentBranch) {
     }
 
     const sortedBranches = [
-        ...(defaultBranch && branches.includes(defaultBranch) ?
-            [defaultBranch] :
-            []),
+        ...(defaultBranch && branches.includes(defaultBranch) ? [defaultBranch] : []),
         ...branches.filter((branch) => branch !== defaultBranch),
     ];
 
     return select({
         message: 'PRのbase branchを選択してください:',
         choices: sortedBranches.map((branch) => ({
-            name: branch === defaultBranch ?
-                `${branch} (default)` :
-                branch,
+            name: branch === defaultBranch ? `${branch} (default)` : branch,
             value: branch,
         })),
     });
@@ -240,7 +236,7 @@ function buildPrBody({
     description,
     commits,
 }) {
-    return `## What
+    return `## 概要
 
 ${description}
 
@@ -251,13 +247,6 @@ ${commits
   .filter(Boolean)
   .map((commit) => `- ${commit}`)
   .join('\n')}
-
-## Test
-
-- [ ] pnpm lint
-- [ ] pnpm deadCode
-- [ ] pnpm --filter api test
-- [ ] pnpm --filter api exec tsc --noEmit
 `;
 }
 
@@ -355,7 +344,7 @@ console.log(`PR base:     ${comparisonBase}`);
 console.log(`push先:      ${remote}/${branch}`);
 
 const description = await input({
-    message: '今回の変更概要を入力してください:',
+    message: 'PRの変更概要を入力してください:',
     validate(value) {
         return (
             value.trim().length > 0 ||
