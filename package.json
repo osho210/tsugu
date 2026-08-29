@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "db:prepare": "pnpm db:emit && pnpm --filter api exec prisma migration plan",
+    "prisma:prepare": "pnpm --filter api exec prisma contract emit && pnpm --filter api exec prisma migration plan",
     "prisma:status": "pnpm --filter api exec prisma migration status",
     "prisma:migrate": "pnpm --filter api exec prisma db migrate",
     "prepare": "husky",
