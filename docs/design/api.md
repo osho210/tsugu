@@ -13,12 +13,17 @@ Request:
     "repository": "example",
     "issueNumber": 123
   },
-  "backlogTaskId": "TASK-123",
-  "mode": "fixture"
+  "backlogTaskId": "TASK-123"
 }
 ```
 
-`mode` is `fixture` or `live`. Fixture mode must not require external credentials.
+The client does not select `fixture` or `live` mode. Adapter mode is a server-side runtime configuration.
+
+- local/CI verification may boot the application with fixture adapters and must not require external credentials.
+- production must not register fixture adapters for assignment requests.
+- configuration that attempts to enable fixture adapters in production must fail closed at startup or be explicitly rejected before handling requests.
+
+This prevents fixture-derived recommendation/decision snapshots from being mixed with live production data through caller-controlled input.
 
 Response contains:
 
@@ -27,12 +32,14 @@ Response contains:
 - Required Capability (`Domain × Role × Level`)
 - Experience / EXP / Level summary
 - Workload / Coverage / Bottleneck before assignment
-- Fast / Balanced / Growth plans
-- Reviewer / Support
-- seven-axis scores
-- predicted completion
-- Workload/Coverage/Bottleneck after assignment
-- explanation and risk
+- Fast / Balanced / Growth mode results, each with `available` or `unavailable` state
+- Reviewer / Support for available plans
+- seven-axis scores for available plans
+- predicted completion for available plans
+- Workload/Coverage/Bottleneck after assignment for available plans
+- explanation and risk/blocking reasons
+
+If no mode has a feasible plan, the response carries overall status `no_feasible_plan`; hard constraints are not silently relaxed.
 
 ### `GET /assignment-recommendations/:id`
 
@@ -50,6 +57,8 @@ Request conceptually contains:
 - selected assignee
 - selected Reviewer/Support
 - override reason when applicable
+
+A decision cannot select a recommendation mode whose state is `unavailable`.
 
 ### `GET /assignment-decisions/:id`
 
