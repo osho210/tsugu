@@ -35,14 +35,14 @@ describe('GitHubIssueHttpSource', () => {
       labels: ['capability:api', 'mvp'],
     });
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      'https://api.github.com/repos/osho210/tsugu/issues/40',
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: 'Bearer test-token',
-        }),
-      }),
-    );
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const call = fetchSpy.mock.lastCall;
+    expect(call?.[0]).toBe('https://api.github.com/repos/osho210/tsugu/issues/40');
+    expect(call?.[1]?.headers).toEqual({
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      Authorization: 'Bearer test-token',
+    });
   });
 
   it('404をnot-foundへ分類する', async () => {
