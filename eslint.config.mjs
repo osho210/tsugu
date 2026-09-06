@@ -12,6 +12,8 @@ import nextTs from 'eslint-config-next/typescript';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
+import jsdoc from 'eslint-plugin-jsdoc';
+import tsdoc from 'eslint-plugin-tsdoc';
 
 export default defineConfig([
     globalIgnores([
@@ -64,6 +66,11 @@ export default defineConfig([
             ...tseslint.configs.recommendedTypeChecked,
         ],
 
+        plugins: {
+            tsdoc,
+            jsdoc,
+        },
+
         languageOptions: {
             globals: {
                 ...globals.node,
@@ -72,15 +79,20 @@ export default defineConfig([
 
             parserOptions: {
                 projectService: true,
-                tsconfigRootDir: new URL('./apps/api',
-                    import.meta.url).pathname,
+                tsconfigRootDir: new URL(
+                    './apps/api',
+                    import.meta.url,
+                ).pathname,
             },
         },
 
         rules: {
-            '@typescript-eslint/no-explicit-any': 'off',
+            '@typescript-eslint/no-explicit-any': 'error',
             '@typescript-eslint/no-floating-promises': 'warn',
             '@typescript-eslint/no-unsafe-argument': 'warn',
+
+            'tsdoc/syntax': 'error',
+            'jsdoc/no-types': 'error',
         },
     },
 
@@ -97,6 +109,61 @@ export default defineConfig([
             globals: {
                 ...globals.node,
             },
+        },
+    },
+
+    {
+        files: ['apps/**/*.{ts,tsx}'],
+
+        plugins: {
+            jsdoc,
+            tsdoc,
+        },
+
+        rules: {
+            'tsdoc/syntax': 'error',
+            'jsdoc/no-types': 'error',
+
+            'jsdoc/require-jsdoc': [
+                'error',
+                {
+                    publicOnly: true,
+                    require: {
+                        FunctionDeclaration: true,
+                        ClassDeclaration: true,
+                    },
+                    contexts: [
+                        'ExportNamedDeclaration > TSTypeAliasDeclaration',
+                        'ExportNamedDeclaration > TSInterfaceDeclaration',
+                        'ExportNamedDeclaration > TSEnumDeclaration',
+                        'ExportNamedDeclaration > VariableDeclaration',
+                    ],
+                },
+            ],
+
+            'jsdoc/require-description': [
+                'error',
+                {
+                    contexts: [
+                        'ExportNamedDeclaration > TSTypeAliasDeclaration',
+                        'ExportNamedDeclaration > TSInterfaceDeclaration',
+                        'ExportNamedDeclaration > TSEnumDeclaration',
+                        'ExportNamedDeclaration > VariableDeclaration',
+                        'ExportNamedDeclaration > FunctionDeclaration',
+                        'ExportDefaultDeclaration > FunctionDeclaration',
+                        'ExportNamedDeclaration > ClassDeclaration',
+                        'ExportDefaultDeclaration > ClassDeclaration',
+                    ],
+                },
+            ],
+
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector: 'ExportNamedDeclaration[declaration=null][source=null]',
+                    message: '宣言と export を分離しないでください。公開する宣言は宣言時に export し、TSDoc を付与してください。',
+                },
+            ],
         },
     },
 

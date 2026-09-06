@@ -22,8 +22,11 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 24.13.1
+          node-version: '>=24.15.0 <25'
           cache: pnpm
+
+      - name: TODO check
+        run: pnpm check:todo
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
