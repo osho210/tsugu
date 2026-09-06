@@ -62,10 +62,15 @@ export type GitHubIssueSource = {
 export function validateGitHubIssueQuery(query: GitHubIssueQuery): void {
   const repositoryPart = /^[A-Za-z0-9_.-]+$/;
 
-  if (!repositoryPart.test(query.owner) || !repositoryPart.test(query.repository)) {
+  if (
+    !repositoryPart.test(query.owner) ||
+    !repositoryPart.test(query.repository) ||
+    isDotSegment(query.owner) ||
+    isDotSegment(query.repository)
+  ) {
     throw new GitHubIssueSourceError(
       'invalid-input',
-      'GitHub owner and repository must contain only valid repository identifier characters.',
+      'GitHub owner and repository must be valid repository identifiers and must not be dot segments.',
     );
   }
 
@@ -75,4 +80,8 @@ export function validateGitHubIssueQuery(query: GitHubIssueQuery): void {
       'GitHub issue number must be a positive integer.',
     );
   }
+}
+
+function isDotSegment(value: string): boolean {
+  return value === '.' || value === '..';
 }
