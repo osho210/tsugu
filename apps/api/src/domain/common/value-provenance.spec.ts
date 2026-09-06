@@ -42,6 +42,31 @@ describe('ValueProvenance', () => {
     });
   });
 
+  it.each([
+    ['2026-09-07T09:00:00+09:00', '2026-09-07T00:00:00.000Z'],
+    ['2026-09-07T00:00:00Z', '2026-09-07T00:00:00.000Z'],
+  ])('有効なISO timestamp %s をUTCへ正規化する', (input, expected) => {
+    expect(
+      createHumanOverride({
+        value: 4,
+        actorId: 'user-1',
+        correctedAt: input,
+        reason: '確認済み',
+      }).correctedAt,
+    ).toBe(expected);
+  });
+
+  it('timestampではない日付文字列を拒否する', () => {
+    expect(() =>
+      createHumanOverride({
+        value: 4,
+        actorId: 'user-1',
+        correctedAt: '2026-09-07',
+        reason: '確認済み',
+      }),
+    ).toThrow('Human override correctedAt must be a valid ISO timestamp.');
+  });
+
   it('空のoverride reasonを拒否する', () => {
     expect(() =>
       createHumanOverride({
