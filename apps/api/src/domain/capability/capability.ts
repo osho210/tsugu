@@ -1,7 +1,7 @@
 /**
  * Capabilityで担当する工程Role。
  */
-export type CapabilityRole =
+type CapabilityRole =
   | 'Requirement Definition'
   | 'Specification'
   | 'Design'
@@ -16,17 +16,17 @@ export type CapabilityRole =
 /**
  * Capabilityへ要求される難易度・自律度Level。
  */
-export type CapabilityLevel = 1 | 2 | 3 | 4 | 5;
+type CapabilityLevel = 1 | 2 | 3 | 4 | 5;
 
 /**
  * Taskに対するCapabilityの重要度。
  */
-export type CapabilityImportance = 'required' | 'optional';
+type CapabilityImportance = 'required' | 'optional';
 
 /**
  * Capability判定の根拠となった入力Evidence。
  */
-export type CapabilityEvidence = {
+type CapabilityEvidence = {
   source: 'issue-title' | 'issue-body' | 'issue-label';
   text: string;
 };
@@ -66,6 +66,12 @@ export function parseRequiredCapability(value: unknown): RequiredCapability {
     throw new Error('Required Capability domain must be a non-empty string.');
   }
 
+  const normalizedDomain = normalizeDomain(domain);
+
+  if (normalizedDomain.length === 0) {
+    throw new Error('Required Capability domain must contain letters or numbers.');
+  }
+
   if (!isCapabilityRole(role)) {
     throw new Error('Required Capability role is invalid.');
   }
@@ -96,7 +102,7 @@ export function parseRequiredCapability(value: unknown): RequiredCapability {
   }
 
   return {
-    domain: normalizeDomain(domain),
+    domain: normalizedDomain,
     role,
     requiredLevel,
     importance,
@@ -118,7 +124,12 @@ export function parseRequiredCapabilities(value: unknown): readonly RequiredCapa
 }
 
 function normalizeDomain(value: string): string {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return value
+    .normalize('NFKC')
+    .trim()
+    .toLocaleLowerCase('en-US')
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-|-$/g, '');
 }
 
 function parseCapabilityEvidence(value: unknown): CapabilityEvidence {
