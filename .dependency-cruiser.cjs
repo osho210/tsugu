@@ -101,6 +101,29 @@ module.exports = {
         path: testPath,
       },
     },
+    {
+      name: 'DomainからPrismaへの直接依存を禁止',
+      severity: 'error',
+      comment: 'Domain層からPrismaへ直接依存してはいけません。DBアクセスはRepository interfaceを介し、Infrastructure側のRepository実装で行ってください。',
+      from: {
+        path: '^apps/api/src/domain(?:/|$)',
+      },
+      to: {
+        path: '^apps/api/src/prisma(?:/|$)',
+      },
+    },
+
+    {
+      name: 'ApplicationからPrismaへの直接依存を禁止',
+      severity: 'error',
+      comment: 'Application層からPrismaへ直接依存してはいけません。DBアクセスはRepository interfaceを介してください。',
+      from: {
+        path: '^apps/api/src/application(?:/|$)',
+      },
+      to: {
+        path: '^apps/api/src/prisma(?:/|$)',
+      },
+    },
   ],
 
   options: {

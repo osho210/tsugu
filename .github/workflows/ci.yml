@@ -37,6 +37,9 @@ jobs:
       - name: Architecture check
         run: pnpm architecture
 
+      - name: Migration safety check
+        run: pnpm check:migration
+
       - name: Dead code
         run: pnpm deadCode
 
