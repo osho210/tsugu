@@ -55,10 +55,7 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
       throw new GitHubIssueSourceError('not-found', 'GitHub Issue was not found.');
     }
 
-    if (
-      response.status === 403 &&
-      response.headers.get('x-ratelimit-remaining') === '0'
-    ) {
+    if (response.status === 403 && isRateLimitResponse(response)) {
       throw new GitHubIssueSourceError('rate-limit', 'GitHub API rate limit was exceeded.');
     }
 
@@ -76,10 +73,37 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
       );
     }
 
-    const payload: unknown = await response.json();
+    const payload = await readJsonBody(response);
 
     return parseGitHubIssueResponse(query, payload);
   }
+}
+
+async function readJsonBody(response: Response): Promise<unknown> {
+  try {
+    return await response.json();
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new GitHubIssueSourceError(
+        'invalid-response',
+        'GitHub Issue response body was not valid JSON.',
+        { cause: error },
+      );
+    }
+
+    throw new GitHubIssueSourceError(
+      'temporary-failure',
+      'GitHub Issue response body could not be read.',
+      { cause: error },
+    );
+  }
+}
+
+function isRateLimitResponse(response: Response): boolean {
+  return (
+    response.headers.get('x-ratelimit-remaining') === '0' ||
+    response.headers.has('retry-after')
+  );
 }
 
 function parseGitHubIssueResponse(query: GitHubIssueQuery, value: unknown): GitHubIssue {
