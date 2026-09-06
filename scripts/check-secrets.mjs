@@ -46,6 +46,24 @@ function tryGit(args) {
   }
 }
 
+function resolveBaseRef() {
+  if (tryGit(['rev-parse', '--verify', baseRef])) {
+    return baseRef;
+  }
+
+  if (baseRef.startsWith('origin/')) {
+    const localRef = baseRef.slice('origin/'.length);
+
+    if (tryGit(['rev-parse', '--verify', localRef])) {
+      return localRef;
+    }
+  }
+
+  throw new Error(
+    `Secret scan base ref could not be resolved: ${baseRef}. Fetch the base branch or set BASE_REF explicitly.`,
+  );
+}
+
 function isBinary(content) {
   return content.includes('\0');
 }
@@ -87,13 +105,15 @@ function scanCurrentTree(findings) {
 }
 
 function getIntroducedBlobs() {
-  const mergeBase = tryGit(['merge-base', baseRef, 'HEAD']);
+  const resolvedBaseRef = resolveBaseRef();
+  const mergeBase = runGit(['merge-base', resolvedBaseRef, 'HEAD']);
+  const head = runGit(['rev-parse', 'HEAD']);
 
-  if (!mergeBase || mergeBase === tryGit(['rev-parse', 'HEAD'])) {
+  if (mergeBase === head) {
     return [];
   }
 
-  const output = tryGit([
+  const output = runGit([
     'rev-list',
     '--objects',
     `${mergeBase}..HEAD`,
@@ -121,13 +141,17 @@ function getIntroducedBlobs() {
       continue;
     }
 
-    if (tryGit(['cat-file', '-t', sha]) !== 'blob') {
+    if (runGit(['cat-file', '-t', sha]) !== 'blob') {
       continue;
     }
 
-    const size = Number(tryGit(['cat-file', '-s', sha]));
+    const size = Number(runGit(['cat-file', '-s', sha]));
 
-    if (!Number.isFinite(size) || size > maxFileSize) {
+    if (!Number.isFinite(size)) {
+      throw new Error(`Could not determine Git object size: ${sha}`);
+    }
+
+    if (size > maxFileSize) {
       continue;
     }
 
@@ -140,15 +164,9 @@ function getIntroducedBlobs() {
 
 function scanIntroducedHistory(findings) {
   for (const blob of getIntroducedBlobs()) {
-    const content = tryGit(['cat-file', '-p', blob.sha]);
-
-    if (content === null) {
-      continue;
-    }
-
     scanContent({
       source: `${blob.path} @ ${blob.sha.slice(0, 12)}`,
-      content,
+      content: runGit(['cat-file', '-p', blob.sha]),
       findings,
     });
   }
@@ -156,8 +174,14 @@ function scanIntroducedHistory(findings) {
 
 const findings = [];
 
-scanCurrentTree(findings);
-scanIntroducedHistory(findings);
+try {
+  scanCurrentTree(findings);
+  scanIntroducedHistory(findings);
+} catch (error) {
+  console.error('Secret scan could not inspect the required Git state.');
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
 
 const uniqueFindings = [
   ...new Map(
