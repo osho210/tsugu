@@ -42,3 +42,17 @@ The `migration-approved` PR label represents explicit Human approval and MUST on
 Codex MUST NOT execute migrations against a real database without explicit Human approval.
 
 Do not weaken migration safety checks solely to make a change pass.
+
+## Logging and Observability
+
+Before changing production logging or observability behavior, read:
+
+- `../../docs/rules/observability.md`
+
+Production application logs MUST go through `AppLogger`.
+
+Do not use direct `console` calls in production API source.
+
+Do not log secrets, credentials, authentication payloads, complete headers, or other sensitive data.
+
+Keep logging calls vendor-neutral so request ID and OpenTelemetry trace correlation can be added without changing business code.
