@@ -1,45 +1,61 @@
 import {
     execFileSync
 } from 'node:child_process';
+import {
+    readFileSync
+} from 'node:fs';
 
-let output = '';
+import tseslint from 'typescript-eslint';
 
-try {
-    output = execFileSync(
+const files = execFileSync(
         'git',
         [
-            'grep',
-            '-n',
-            '-E',
-            'TODO',
+            'ls-files',
+            '-z',
             '--',
-            '*.ts',
-            '*.tsx',
             '*.js',
             '*.jsx',
+            '*.mjs',
+            '*.cjs',
+            '*.ts',
+            '*.tsx',
+            '*.mts',
+            '*.cts',
         ], {
-            encoding: 'utf8',
+            encoding: 'utf8'
         },
-    );
-} catch (error) {
-    // git grep は一致が0件の場合 exit code 1 になる。
-    if (error.status === 1) {
-        process.exit(0);
-    }
+    )
+    .split('\0')
+    .filter(Boolean);
 
-    throw error;
+const invalidComments = [];
+
+for (const file of files) {
+    const source = readFileSync(file, 'utf8');
+
+    const {
+        ast
+    } = tseslint.parser.parseForESLint(source, {
+        filePath: file,
+        loc: true,
+        comment: true,
+    });
+
+    for (const comment of ast.comments ?? []) {
+        // TODO(#123): だけ許可
+        if (/\bTODO\b(?!\(#\d+\):)/.test(comment.value)) {
+            invalidComments.push(
+                `${file}:${comment.loc.start.line}: ${comment.value.trim()}`,
+            );
+        }
+    }
 }
 
-const invalidLines = output
-    .split('\n')
-    .filter(Boolean)
-    .filter((line) => !/TODO\(#\d+\):/.test(line));
-
-if (invalidLines.length === 0) {
+if (invalidComments.length === 0) {
     process.exit(0);
 }
 
-console.error('Issue番号のないTODOがあります:\n');
-console.error(invalidLines.join('\n'));
+console.error('Issue番号のないTODOコメントがあります:\n');
+console.error(invalidComments.join('\n'));
 
 process.exit(1);

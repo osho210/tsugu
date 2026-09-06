@@ -156,6 +156,14 @@ export default defineConfig([
                     ],
                 },
             ],
+
+            'no-restricted-syntax': [
+                'error',
+                {
+                    selector: 'ExportNamedDeclaration[declaration=null][source=null]',
+                    message: '宣言と export を分離しないでください。公開する宣言は宣言時に export し、TSDoc を付与してください。',
+                },
+            ],
         },
     },
 
