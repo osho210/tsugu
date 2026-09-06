@@ -13,7 +13,8 @@
     "commit": "cz",
     "push": "node scripts/push.mjs",
     "check:todo": "node scripts/check-todos.mjs",
-    "architecture": "depcruise apps packages --config .dependency-cruiser.cjs --output-type err-long"
+    "architecture": "depcruise apps packages --config .dependency-cruiser.cjs --output-type err-long",
+    "check:migration": "node scripts/check-migrations.mjs"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

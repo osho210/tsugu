@@ -26,3 +26,19 @@ Infrastructure implements repository interfaces.
 - Domain must remain independent from framework and infrastructure details.
 - Database access must go through repository implementations.
 - Do not bypass architecture checks to make a change pass.
+
+## Database and Migrations
+
+Before modifying database access or migrations, read:
+
+- `../../docs/rules/database.md`
+
+Codex MAY generate migration files.
+
+Codex MUST NOT approve its own destructive or high-risk migration.
+
+The `migration-approved` PR label represents explicit Human approval and MUST only be applied after Human review.
+
+Codex MUST NOT execute migrations against a real database without explicit Human approval.
+
+Do not weaken migration safety checks solely to make a change pass.
