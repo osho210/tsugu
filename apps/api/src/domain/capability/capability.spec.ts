@@ -26,6 +26,24 @@ describe('RequiredCapability', () => {
     });
   });
 
+  it('日本語Domainを保持して正規化する', () => {
+    expect(
+      parseRequiredCapability({
+        ...validCapability,
+        domain: ' データベース ',
+      }).domain,
+    ).toBe('データベース');
+  });
+
+  it('正規化後に空になるDomainを拒否する', () => {
+    expect(() =>
+      parseRequiredCapability({
+        ...validCapability,
+        domain: '!!!',
+      }),
+    ).toThrow('Required Capability domain must contain letters or numbers.');
+  });
+
   it.each([0, 6])('Required Level %s を拒否する', (requiredLevel) => {
     expect(() =>
       parseRequiredCapability({
