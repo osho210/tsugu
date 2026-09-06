@@ -54,3 +54,17 @@ Validate all external input at the trust boundary before it reaches business log
 Do not log or commit secrets, tokens, passwords, credentials, or authorization data.
 
 Do not weaken security gates solely to make a change pass.
+
+## Logging and Observability
+
+Before changing production logging or observability behavior, read:
+
+- `../../docs/rules/observability.md`
+
+Production application logs MUST go through `AppLogger`.
+
+Do not use direct `console` calls in production API source.
+
+Do not log secrets, credentials, authentication payloads, complete headers, or other sensitive data.
+
+Keep logging calls vendor-neutral so request ID and OpenTelemetry trace correlation can be added without changing business code.

@@ -96,6 +96,15 @@ export default defineConfig([
         },
     },
 
+    // Production API logging must go through AppLogger.
+    {
+        files: ['apps/api/src/**/*.{js,ts}'],
+
+        rules: {
+            'no-console': 'error',
+        },
+    },
+
     // Prisma CLI config
     {
         files: ['apps/api/prisma.config.ts'],
