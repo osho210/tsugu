@@ -2,13 +2,15 @@
 
 ## Principle
 
-Always provide multiple options. Human makes the final selection.
+Expose the three recommendation modes so Human can compare tradeoffs. Human makes the final selection.
 
 - **Fast**: prioritize fastest/safest completion.
 - **Balanced**: balance deadline, workload, growth and coverage.
 - **Growth**: maximize capability coverage while remaining feasible.
 
 A member with a Capability gap may remain a candidate if appropriate Reviewer/Support makes completion safe.
+
+A mode must never fabricate an assignable plan merely to fill the Fast/Balanced/Growth slots. Each mode is returned with either an `available` plan or an explicit `unavailable` state and reasons.
 
 ## Required Capability
 
@@ -26,9 +28,26 @@ Apply before weighted scoring.
 
 - Exclude plans predicted to miss the deadline by default.
 - Security-critical work may exclude candidates lacking required Capability.
-- Exclude candidates whose post-assignment Workload exceeds the allowed limit.
+- Exclude candidates whose post-assignment Workload exceeds the team Limit.
 - Exclude plans that require Reviewer/Support when none can be secured.
 - Extremely high Coverage Risk may allow a warned exception plan when the product rule permits it.
+
+Team workload thresholds are configurable. Initial values are:
+
+- Target: 80%
+- Warning: 90%
+- Limit: 100%
+
+Target and Warning affect scoring/warnings. `post-assignment workload > Limit` is ineligible by default before scoring.
+
+### Too Few Feasible Plans
+
+Hard constraints are not silently relaxed to manufacture recommendations.
+
+- If a recommendation mode has no feasible candidate, return that mode as `unavailable` with structured exclusion reasons.
+- If all three modes are unavailable, return overall status `no_feasible_plan` and the blocking reasons.
+- The API/UI may still show blocked candidates as diagnostic context, but they are not selectable assignment recommendations.
+- Relaxing a team threshold, deadline expectation, security requirement or support requirement is a Human decision, not an automatic fallback.
 
 ## Coverage Risk
 
@@ -52,6 +71,8 @@ Normalize each axis to 0–100.
 5. Deadline Safety
 6. Support Safety
 7. Bottleneck Impact
+
+The weighted arithmetic must be deterministic. The Product Source of Truth defines the meaning of each axis and the mode weights, but it does not yet define complete normalization formulas for every axis. Do not invent those formulas in implementation; they require an explicit Human-reviewed scoring decision before the scoring engine is finalized.
 
 ### Fast initial weights
 
@@ -87,7 +108,7 @@ Each mode must validate that weights total 100. The model must support team-conf
 
 ## Recommendation Output
 
-Each plan must include:
+Each mode must include availability state. An available plan includes:
 
 - assignee candidate
 - Reviewer / Support candidate
@@ -99,5 +120,7 @@ Each plan must include:
 - seven-axis breakdown
 - risk/warning
 - explanation
+
+An unavailable mode includes structured blocking reasons instead of a fabricated candidate.
 
 Weighted score calculation is deterministic. AI may assist semantic classification and Explanation, but does not perform the final arithmetic or Human decision.
