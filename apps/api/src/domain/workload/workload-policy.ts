@@ -1,3 +1,5 @@
+const WORKLOAD_PERCENTAGE_DECIMALS = 6;
+
 /**
  * TeamごとのWorkload運用閾値。
  */
@@ -47,8 +49,9 @@ export function validateWorkloadPolicy(policy: WorkloadPolicy): void {
 
 /**
  * 予測負荷時間を稼働可能時間に対する割合へ変換する。
+ * percentageは浮動小数ノイズを避けるため小数6桁へ正規化する。
  *
- * @throws 時間が負数または非有限値の場合。
+ * @throws 時間が負数・非有限値、または算定割合が非有限値の場合。
  */
 export function calculateWorkload(
   predictedWorkloadHours: number,
@@ -67,9 +70,15 @@ export function calculateWorkload(
     return { status: 'unavailable' };
   }
 
+  const rawPercentage = (predictedWorkloadHours / availableHours) * 100;
+
+  if (!Number.isFinite(rawPercentage)) {
+    throw new Error('Calculated workload percentage must be finite.');
+  }
+
   return {
     status: 'available',
-    percentage: (predictedWorkloadHours / availableHours) * 100,
+    percentage: normalizePercentage(rawPercentage),
   };
 }
 
@@ -81,21 +90,31 @@ export function calculateLoadFitness(workload: WorkloadResult): number {
     return 0;
   }
 
-  if (workload.percentage <= 50) {
+  const percentage = normalizePercentage(workload.percentage);
+
+  if (!Number.isFinite(percentage) || percentage < 0) {
+    throw new Error('Workload percentage must be a finite non-negative number.');
+  }
+
+  if (percentage <= 50) {
     return 100;
   }
 
-  if (workload.percentage <= 70) {
+  if (percentage <= 70) {
     return 80;
   }
 
-  if (workload.percentage <= 85) {
+  if (percentage <= 85) {
     return 50;
   }
 
-  if (workload.percentage <= 100) {
+  if (percentage <= 100) {
     return 20;
   }
 
   return 0;
+}
+
+function normalizePercentage(value: number): number {
+  return Number(value.toFixed(WORKLOAD_PERCENTAGE_DECIMALS));
 }
