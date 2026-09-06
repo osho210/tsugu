@@ -55,8 +55,12 @@ Initial Process Roles:
 
 Remaining Work priority:
 
-1. `estimated_hours - actual_hours`
-2. If estimate is missing, use a semantic/AI estimate from available status/deadline/progress context.
+1. If the task is complete, Remaining Work is `0`.
+2. If both estimate and actual are available and `estimated_hours > actual_hours`, use `estimated_hours - actual_hours`.
+3. If the task is incomplete and `actual_hours >= estimated_hours`, the original estimate is exhausted and must not produce negative Remaining Work. Use a semantic/AI remaining-work estimate from status/deadline/progress context and clamp the normalized result to `>= 0`.
+4. If estimate is missing, use a semantic/AI estimate from available status/deadline/progress context and clamp the normalized result to `>= 0`.
+
+The connector preserves raw estimate/actual values separately from the derived Remaining Work value and its provenance so Human correction remains traceable.
 
 ## Adapter Boundary
 
