@@ -1,8 +1,8 @@
 import {
-  GitHubIssueSourceError,
   type GitHubIssue,
   type GitHubIssueQuery,
   type GitHubIssueSource,
+  GitHubIssueSourceError,
   validateGitHubIssueQuery,
 } from '../../application/github/github-issue-source';
 
