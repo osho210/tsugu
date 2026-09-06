@@ -44,6 +44,14 @@ solely to make a task pass.
 
 Changes to quality gates require Human approval.
 
+## Security
+
+Before changing trust boundaries, authentication or authorization behavior, secrets, dependency security, or security gates, read:
+
+- `docs/rules/security.md`
+
+Security gates MUST NOT be weakened, bypassed, or reduced in coverage without explicit Human review.
+
 ## Harness
 
 When implementing changes, follow:
