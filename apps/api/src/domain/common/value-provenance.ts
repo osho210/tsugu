@@ -1,7 +1,7 @@
 /**
  * 値がどの経路で得られたかを示すProvenance種別。
  */
-export type ValueProvenanceKind =
+type ValueProvenanceKind =
   | 'observed'
   | 'ai-calculated'
   | 'self-reported'
@@ -10,7 +10,7 @@ export type ValueProvenanceKind =
 /**
  * Human override前の元値とProvenance。
  */
-export type SourceValue<T> = {
+type SourceValue<T> = {
   kind: Exclude<ValueProvenanceKind, 'human-override'>;
   value: T;
 };
@@ -44,6 +44,7 @@ export type EffectiveValue<T> = {
 
 /**
  * Human overrideを監査可能な形で生成する。
+ * correctedAtは有効なISO 8601 timestampを受理し、UTC millisecond形式へ正規化する。
  *
  * @throws actor、reason、correctedAtが監査情報として不正な場合。
  */
@@ -55,6 +56,7 @@ export function createHumanOverride<T>(input: {
 }): HumanOverride<T> {
   const actorId = input.actorId.trim();
   const reason = input.reason.trim();
+  const correctedAt = normalizeIsoTimestamp(input.correctedAt);
 
   if (actorId.length === 0) {
     throw new Error('Human override actorId must not be empty.');
@@ -64,7 +66,7 @@ export function createHumanOverride<T>(input: {
     throw new Error('Human override reason must not be empty.');
   }
 
-  if (!isValidIsoDate(input.correctedAt)) {
+  if (correctedAt === null) {
     throw new Error('Human override correctedAt must be a valid ISO timestamp.');
   }
 
@@ -72,7 +74,7 @@ export function createHumanOverride<T>(input: {
     kind: 'human-override',
     value: input.value,
     actorId,
-    correctedAt: input.correctedAt,
+    correctedAt,
     reason,
   };
 }
@@ -94,8 +96,19 @@ export function resolveEffectiveValue<T>(input: ProvenancedValue<T>): EffectiveV
   };
 }
 
-function isValidIsoDate(value: string): boolean {
+function normalizeIsoTimestamp(value: string): string | null {
+  const isoTimestamp =
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+  if (!isoTimestamp.test(value)) {
+    return null;
+  }
+
   const parsed = Date.parse(value);
 
-  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
+  if (!Number.isFinite(parsed)) {
+    return null;
+  }
+
+  return new Date(parsed).toISOString();
 }
