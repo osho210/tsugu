@@ -27,6 +27,22 @@ describe('WorkloadPolicy', () => {
     });
   });
 
+  it('浮動小数ノイズを境界判定前に正規化する', () => {
+    const workload = calculateWorkload(0.1 + 0.2, 0.6);
+
+    expect(workload).toEqual({
+      status: 'available',
+      percentage: 50,
+    });
+    expect(calculateLoadFitness(workload)).toBe(100);
+  });
+
+  it('算定割合がInfinityになる入力を拒否する', () => {
+    expect(() => calculateWorkload(Number.MAX_VALUE, 1)).toThrow(
+      'Calculated workload percentage must be finite.',
+    );
+  });
+
   it('availableHours 0をunavailableとして扱う', () => {
     expect(calculateWorkload(8, 0)).toEqual({
       status: 'unavailable',
@@ -49,6 +65,15 @@ describe('WorkloadPolicy', () => {
         percentage,
       }),
     ).toBe(expected);
+  });
+
+  it('非有限なpercentageをLoad Fitnessへ渡すことを拒否する', () => {
+    expect(() =>
+      calculateLoadFitness({
+        status: 'available',
+        percentage: Number.POSITIVE_INFINITY,
+      }),
+    ).toThrow('Workload percentage must be a finite non-negative number.');
   });
 
   it('unavailableはLoad Fitness 0にする', () => {
