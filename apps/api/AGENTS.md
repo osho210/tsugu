@@ -7,7 +7,6 @@ Before modifying API code, read:
 - `../../ARCHITECTURE.md`
 - `../../docs/rules/architecture.md`
 - `../../docs/rules/typescript.md`
-- `../../docs/rules/testing.md`
 
 ## Architecture
 
