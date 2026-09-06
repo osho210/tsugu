@@ -32,6 +32,8 @@ jobs:
 
       - name: Secret scan
         run: pnpm check:secrets
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
