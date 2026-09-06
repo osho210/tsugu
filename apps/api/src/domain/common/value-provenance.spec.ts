@@ -1,7 +1,7 @@
 import {
   createHumanOverride,
-  resolveEffectiveValue,
   type ProvenancedValue,
+  resolveEffectiveValue,
 } from './value-provenance';
 
 describe('ValueProvenance', () => {
