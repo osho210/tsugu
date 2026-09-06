@@ -1,4 +1,3 @@
-import { GitHubIssueSourceError } from '../../application/github/github-issue-source';
 import { FixtureGitHubIssueSource } from './fixture-github-issue-source';
 
 describe('FixtureGitHubIssueSource', () => {
@@ -33,7 +32,8 @@ describe('FixtureGitHubIssueSource', () => {
         repository: 'tsugu',
         issueNumber: 999,
       }),
-    ).rejects.toMatchObject<GitHubIssueSourceError>({
+    ).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
       kind: 'not-found',
     });
   });
@@ -47,7 +47,8 @@ describe('FixtureGitHubIssueSource', () => {
         repository: 'tsugu',
         issueNumber: 40,
       }),
-    ).rejects.toMatchObject<GitHubIssueSourceError>({
+    ).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
       kind: 'invalid-input',
     });
   });
