@@ -14,7 +14,10 @@
     "push": "node scripts/push.mjs",
     "check:todo": "node scripts/check-todos.mjs",
     "architecture": "depcruise apps packages --config .dependency-cruiser.cjs --output-type err-long",
-    "check:migration": "node scripts/check-migrations.mjs"
+    "check:migration": "node scripts/check-migrations.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs",
+    "security:audit": "pnpm audit --prod --audit-level=high",
+    "security:audit:dev": "pnpm audit --dev --audit-level=high"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx}": [

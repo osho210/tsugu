@@ -30,8 +30,18 @@ jobs:
       - name: TODO check
         run: pnpm check:todo
 
+      - name: Secret scan
+        run: pnpm check:secrets
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Production dependency vulnerability audit
+        run: pnpm security:audit
+
+      - name: Development dependency vulnerability audit
+        run: pnpm security:audit:dev
+        continue-on-error: true
 
       - name: Lint
         run: pnpm lint

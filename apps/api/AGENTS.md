@@ -43,6 +43,18 @@ Codex MUST NOT execute migrations against a real database without explicit Human
 
 Do not weaken migration safety checks solely to make a change pass.
 
+## Security
+
+Before changing external input handling, secrets, authentication, authorization, dependency security, or security gates, read:
+
+- `../../docs/rules/security.md`
+
+Validate all external input at the trust boundary before it reaches business logic or persistence.
+
+Do not log or commit secrets, tokens, passwords, credentials, or authorization data.
+
+Do not weaken security gates solely to make a change pass.
+
 ## Logging and Observability
 
 Before changing production logging or observability behavior, read:
