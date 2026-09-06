@@ -35,6 +35,10 @@ Before modifying database access or migrations, read:
 
 Codex MAY generate migration files.
 
+Codex MUST NOT approve its own destructive or high-risk migration.
+
+The `migration-approved` PR label represents explicit Human approval and MUST only be applied after Human review.
+
 Codex MUST NOT execute migrations against a real database without explicit Human approval.
 
 Do not weaken migration safety checks solely to make a change pass.
