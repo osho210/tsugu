@@ -54,6 +54,23 @@ Feedback penalty initial values:
 - `required_fix`: -5
 - `design_issue`: -10
 
+## Capability Promotion
+
+The Product Source of Truth defines the approval boundary:
+
+- Lv1 → Lv2: automatic after configured conditions are satisfied
+- Lv2 → Lv3: automatic after configured conditions are satisfied
+- Lv3 → Lv4: Human approval required
+- Lv4 → Lv5: Human approval required
+
+Approver is a Manager or a member holding a higher Level in the same Capability; when no Lv5 holder exists, Manager approval may be used.
+
+Per-Level `required_exp` and `required_experience_count` are configuration persisted in the database and editable by an authorized Human. The initial `required_experience_count` is 10.
+
+### Human decision still required
+
+The current Product Source of Truth marks Level EXP thresholds as reviewed but does not contain the actual numeric `required_exp` values or enough detail to determine whether EXP/Experience counters reset at promotion or remain cumulative. Those semantics materially change Capability Level and recommendation results, so implementation must not invent them. The promotion engine remains blocked until those values and counter semantics are explicitly decided.
+
 ## Feedback Evidence Rule
 
 If a reviewer points out an issue and it is fixed inside the same PR, that corrected behavior is not counted as new Experience for the author.
