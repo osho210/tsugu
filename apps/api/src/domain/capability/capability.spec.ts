@@ -1,6 +1,6 @@
 import {
-  parseRequiredCapability,
   parseRequiredCapabilities,
+  parseRequiredCapability,
 } from './capability';
 
 describe('RequiredCapability', () => {
