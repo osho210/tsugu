@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v6
@@ -39,6 +41,9 @@ jobs:
 
       - name: Migration safety check
         run: pnpm check:migration
+        env:
+          BASE_REF: origin/${{ github.base_ref }}
+          MIGRATION_APPROVED: ${{ contains(github.event.pull_request.labels.*.name, 'migration-approved') }}
 
       - name: Dead code
         run: pnpm deadCode
