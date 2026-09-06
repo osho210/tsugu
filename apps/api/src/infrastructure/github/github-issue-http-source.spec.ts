@@ -1,4 +1,3 @@
-import { GitHubIssueSourceError } from '../../application/github/github-issue-source';
 import { GitHubIssueHttpSource } from './github-issue-http-source';
 
 describe('GitHubIssueHttpSource', () => {
@@ -49,7 +48,8 @@ describe('GitHubIssueHttpSource', () => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
     const source = new GitHubIssueHttpSource();
 
-    await expect(source.getIssue(query)).rejects.toMatchObject<GitHubIssueSourceError>({
+    await expect(source.getIssue(query)).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
       kind: 'not-found',
     });
   });
@@ -66,7 +66,8 @@ describe('GitHubIssueHttpSource', () => {
     );
     const source = new GitHubIssueHttpSource();
 
-    await expect(source.getIssue(query)).rejects.toMatchObject<GitHubIssueSourceError>({
+    await expect(source.getIssue(query)).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
       kind: 'rate-limit',
     });
   });
@@ -75,7 +76,8 @@ describe('GitHubIssueHttpSource', () => {
     jest.spyOn(globalThis, 'fetch').mockRejectedValue(new DOMException('aborted', 'AbortError'));
     const source = new GitHubIssueHttpSource();
 
-    await expect(source.getIssue(query)).rejects.toMatchObject<GitHubIssueSourceError>({
+    await expect(source.getIssue(query)).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
       kind: 'temporary-failure',
     });
   });
@@ -86,7 +88,8 @@ describe('GitHubIssueHttpSource', () => {
       .mockResolvedValue(new Response('{', { status: 200 }));
     const source = new GitHubIssueHttpSource();
 
-    await expect(source.getIssue(query)).rejects.toMatchObject<GitHubIssueSourceError>({
+    await expect(source.getIssue(query)).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
       kind: 'invalid-response',
     });
   });
@@ -100,7 +103,8 @@ describe('GitHubIssueHttpSource', () => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(body, { status: 200 }));
     const source = new GitHubIssueHttpSource();
 
-    await expect(source.getIssue(query)).rejects.toMatchObject<GitHubIssueSourceError>({
+    await expect(source.getIssue(query)).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
       kind: 'temporary-failure',
     });
   });
@@ -114,7 +118,8 @@ describe('GitHubIssueHttpSource', () => {
         ...query,
         owner: '..',
       }),
-    ).rejects.toMatchObject<GitHubIssueSourceError>({
+    ).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
       kind: 'invalid-input',
     });
     expect(fetchSpy).not.toHaveBeenCalled();
