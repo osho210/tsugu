@@ -94,7 +94,7 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
     }
 
     const payload = await readJsonBody(response);
-    const identity = resolveResponseIdentity(response, query);
+    const identity = resolveResponseIdentity(response, query, payload);
 
     return parseGitHubIssueResponse(identity, payload);
   }
@@ -173,7 +173,11 @@ function isPermissionDeniedMessage(message: string | null): boolean {
   );
 }
 
-function resolveResponseIdentity(response: Response, query: GitHubIssueQuery): GitHubIssueQuery {
+function resolveResponseIdentity(
+  response: Response,
+  query: GitHubIssueQuery,
+  payload: unknown,
+): GitHubIssueQuery {
   if (response.url.length === 0) {
     return query;
   }
@@ -186,23 +190,78 @@ function resolveResponseIdentity(response: Response, query: GitHubIssueQuery): G
     return query;
   }
 
-  const match = /^\/repos\/([^/]+)\/([^/]+)\/issues\/(\d+)$/.exec(url.pathname);
+  if (url.origin !== 'https://api.github.com') {
+    return query;
+  }
+
+  const repositoryPathMatch = /^\/repos\/([^/]+)\/([^/]+)\/issues\/(\d+)$/.exec(url.pathname);
+
+  if (repositoryPathMatch !== null) {
+    if (Number(repositoryPathMatch[3]) !== query.issueNumber) {
+      return query;
+    }
+
+    return validateRedirectIdentity(
+      repositoryPathMatch[1],
+      repositoryPathMatch[2],
+      query.issueNumber,
+    );
+  }
+
+  const repositoryIdPathMatch = /^\/repositories\/(\d+)\/issues\/(\d+)$/.exec(url.pathname);
 
   if (
-    url.origin !== 'https://api.github.com' ||
-    match === null ||
-    Number(match[3]) !== query.issueNumber
+    repositoryIdPathMatch === null ||
+    Number(repositoryIdPathMatch[2]) !== query.issueNumber
   ) {
     return query;
   }
 
+  return resolveIdentityFromRepositoryUrl(payload, query.issueNumber);
+}
+
+function resolveIdentityFromRepositoryUrl(
+  payload: unknown,
+  issueNumber: number,
+): GitHubIssueQuery {
+  if (!isRecord(payload) || typeof payload.repository_url !== 'string') {
+    throw invalidResponse('GitHub Issue responseのrepository_urlが不正です。');
+  }
+
+  let repositoryUrl: URL;
+
+  try {
+    repositoryUrl = new URL(payload.repository_url);
+  } catch {
+    throw invalidResponse('GitHub Issue responseのrepository_urlが不正です。');
+  }
+
+  const match = /^\/repos\/([^/]+)\/([^/]+)$/.exec(repositoryUrl.pathname);
+
+  if (
+    repositoryUrl.origin !== 'https://api.github.com' ||
+    repositoryUrl.search.length > 0 ||
+    repositoryUrl.hash.length > 0 ||
+    match === null
+  ) {
+    throw invalidResponse('GitHub Issue responseのrepository_urlが不正です。');
+  }
+
+  return validateRedirectIdentity(match[1], match[2], issueNumber);
+}
+
+function validateRedirectIdentity(
+  encodedOwner: string,
+  encodedRepository: string,
+  issueNumber: number,
+): GitHubIssueQuery {
   let identity: GitHubIssueQuery;
 
   try {
     identity = {
-      owner: decodeURIComponent(match[1]),
-      repository: decodeURIComponent(match[2]),
-      issueNumber: query.issueNumber,
+      owner: decodeURIComponent(encodedOwner),
+      repository: decodeURIComponent(encodedRepository),
+      issueNumber,
     };
   } catch {
     throw invalidResponse('GitHub API redirect先のrepository identityが不正です。');
