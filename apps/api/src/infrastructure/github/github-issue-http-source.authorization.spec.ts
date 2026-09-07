@@ -41,18 +41,21 @@ describe('GitHubIssueHttpSource authorization classification', () => {
     expect(error.message).toBe('GitHub API error response bodyを読み取れませんでした。');
   });
 
-  it('tokenに制御文字が含まれる場合、credentialをcauseへ保持せずauthentication-failureであること', async () => {
-    const fetchSpy = jest.spyOn(globalThis, 'fetch');
-    const source = new GitHubIssueHttpSource('secret-token\nattacker');
+  it.each(['secret-token\nattacker', 'tokenあ', 'token😀'])(
+    'header-safe ASCIIではないtoken(%s)の場合、credentialをcauseへ保持せずauthentication-failureであること',
+    async (token) => {
+      const fetchSpy = jest.spyOn(globalThis, 'fetch');
+      const source = new GitHubIssueHttpSource(token);
 
-    const error = await captureSourceError(source.getIssue(createGitHubIssueQuery()));
+      const error = await captureSourceError(source.getIssue(createGitHubIssueQuery()));
 
-    expect(fetchSpy).not.toHaveBeenCalled();
-    expect(error.name).toBe('GitHubIssueSourceError');
-    expect(error.kind).toBe('authentication-failure');
-    expect(error.message).toBe('GitHub API tokenの形式が不正です。');
-    expect(error.cause).toBeUndefined();
-  });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(error.name).toBe('GitHubIssueSourceError');
+      expect(error.kind).toBe('authentication-failure');
+      expect(error.message).toBe('GitHub API tokenの形式が不正です。');
+      expect(error.cause).toBeUndefined();
+    },
+  );
 });
 
 async function captureSourceError(promise: Promise<unknown>): Promise<GitHubIssueSourceError> {
