@@ -1,59 +1,65 @@
+import { createAuthenticatedUser } from '../../test/factories/authenticated-user.factory';
 import { parseAuthenticatedUser } from './auth-context';
 
 describe('AuthenticatedUser', () => {
-  const validUser = {
-    internalUserId: 'user-1',
-    externalAuthId: 'clerk-user-1',
-    provider: 'clerk',
-    displayName: 'Tsugu User',
-    email: 'user@example.com',
-  };
+  describe('有効なidentity', () => {
+    it('有効なidentityの場合、全項目を保持したAuthenticatedUserであること', () => {
+      const user = createAuthenticatedUser();
 
-  it('internal identityとexternal auth identityを分離して保持する', () => {
-    expect(parseAuthenticatedUser(validUser)).toEqual(validUser);
-  });
+      expect(parseAuthenticatedUser(user)).toEqual({
+        internalUserId: 'user-1',
+        externalAuthId: 'clerk-user-1',
+        provider: 'clerk',
+        displayName: 'Tsugu User',
+        email: 'user@example.com',
+      });
+    });
 
-  it('identityの前後空白を正規化する', () => {
-    expect(
-      parseAuthenticatedUser({
-        ...validUser,
-        internalUserId: ' user-1 ',
-        externalAuthId: ' clerk-user-1 ',
-      }),
-    ).toEqual(validUser);
-  });
-
-  it.each([
-    ['internalUserId', '   ', 'internal user id'],
-    ['externalAuthId', '', 'external auth id'],
-  ])('空の%sを拒否する', (key, invalidValue, label) => {
-    expect(() =>
-      parseAuthenticatedUser({
-        ...validUser,
-        [key]: invalidValue,
-      }),
-    ).toThrow(`Authenticated user ${label} must be a non-empty string.`);
-  });
-
-  it('Clerk以外のproviderを拒否する', () => {
-    expect(() =>
-      parseAuthenticatedUser({
-        ...validUser,
-        provider: 'unknown',
-      }),
-    ).toThrow('Authenticated user provider must be clerk.');
-  });
-
-  it('空のoptional metadataをnullへ正規化する', () => {
-    expect(
-      parseAuthenticatedUser({
-        ...validUser,
-        displayName: ' ',
+    it('optional metadataが未指定の場合、displayNameとemailがnullであること', () => {
+      const user = createAuthenticatedUser({
+        displayName: null,
         email: null,
-      }),
-    ).toMatchObject({
-      displayName: null,
-      email: null,
+      });
+
+      expect(parseAuthenticatedUser(user)).toEqual({
+        internalUserId: 'user-1',
+        externalAuthId: 'clerk-user-1',
+        provider: 'clerk',
+        displayName: null,
+        email: null,
+      });
+    });
+  });
+
+  describe('不正なidentity', () => {
+    it.each([
+      ['internalUserId', '   ', '認証済みユーザーの内部ユーザーIDは空でない文字列である必要があります。'],
+      ['externalAuthId', '', '認証済みユーザーの外部認証IDは空でない文字列である必要があります。'],
+    ])('%sが空の場合、日本語のvalidation errorになること', (key, invalidValue, message) => {
+      expect(() =>
+        parseAuthenticatedUser({
+          ...createAuthenticatedUser(),
+          [key]: invalidValue,
+        }),
+      ).toThrow(message);
+    });
+
+    it('providerがClerk以外の場合、日本語のvalidation errorになること', () => {
+      expect(() =>
+        parseAuthenticatedUser({
+          ...createAuthenticatedUser(),
+          provider: 'unknown',
+        }),
+      ).toThrow('認証プロバイダーはclerkである必要があります。');
+    });
+
+    it('displayNameが文字列またはnull以外の場合、日本語のvalidation errorになること', () => {
+      expect(() =>
+        parseAuthenticatedUser({
+          ...createAuthenticatedUser(),
+          displayName: 123,
+        }),
+      ).toThrow('表示名は文字列またはnullである必要があります。');
     });
   });
 });
