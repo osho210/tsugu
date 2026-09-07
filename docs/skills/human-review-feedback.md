@@ -10,6 +10,7 @@ Human review feedback is not treated as a one-off patch request. When feedback d
 4. Search active implementation PRs for the same pattern and fix applicable occurrences without crossing unresolved dependencies.
 5. Add or update a repository rule when the invariant should affect future work.
 6. Keep exceptions explicit when a general rule conflicts with an architecture boundary.
+7. If the feedback requires shared configuration, create a prerequisite issue/PR instead of duplicating that configuration across active feature branches.
 
 ## High-priority conventions
 
@@ -30,6 +31,12 @@ Human review feedback is not treated as a one-off patch request. When feedback d
 - Do not duplicate persistence types inside Infrastructure when a generated Prisma type already represents the same persistence shape.
 - Prisma models are persistence models. Do not import Prisma-generated types into Domain or Application merely to avoid declaring a domain/application contract.
 - When a Domain/Application contract intentionally differs from persistence, keep the boundary explicit and map in Infrastructure.
+
+### Imports
+
+- Prefer a project-root alias such as `@/` for cross-directory imports after the repository's shared configuration supports it across typecheck, tests, build, and production runtime.
+- Do not make each feature PR add its own alias configuration. Shared tsconfig/Jest/build/runtime configuration is a prerequisite lane.
+- Same-directory imports may remain relative when they make locality clearer.
 
 ### Validation and normalization
 
