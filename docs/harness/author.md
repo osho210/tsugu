@@ -21,6 +21,8 @@ Behavior-changing code SHOULD include appropriate tests.
 
 Do not make unrelated refactoring unless it is necessary for the requested change.
 
+When Human review feedback describes a reusable convention, treat it as high priority and follow `docs/skills/human-review-feedback.md`: fix the concrete occurrence, inspect analogous active PRs, and promote durable guidance into rules/harness without violating architecture or product boundaries.
+
 ## Verification
 
 Before completing the task:
@@ -29,6 +31,7 @@ Before completing the task:
 2. Review the final diff.
 3. Confirm that no unrelated changes were introduced.
 4. Confirm that behavioral changes have appropriate tests.
+5. Confirm reusable Human feedback was checked against analogous active PRs.
 
 ## Guardrails
 
