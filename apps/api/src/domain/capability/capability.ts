@@ -101,6 +101,10 @@ export function parseRequiredCapability(value: unknown): RequiredCapability {
     throw new Error('Required CapabilityのEvidenceは配列である必要があります。');
   }
 
+  if (evidence.length === 0) {
+    throw new Error('Required CapabilityのEvidenceは1件以上必要です。');
+  }
+
   const parsedEvidence: CapabilityEvidence[] = [];
 
   for (let index = 0; index < evidence.length; index += 1) {
@@ -160,6 +164,7 @@ function normalizeDomain(value: string): string {
       return character.toLocaleUpperCase('und').toLocaleLowerCase('und');
     })
     .join('')
+    .normalize('NFKC')
     .replaceAll('ς', 'σ');
 
   return caseFolded
