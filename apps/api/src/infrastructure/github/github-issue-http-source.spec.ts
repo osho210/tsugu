@@ -34,7 +34,7 @@ describe('GitHubIssueHttpSource', () => {
       });
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
-      expect(String(fetchSpy.mock.lastCall?.[0])).toBe(
+      expect(getFetchUrl(fetchSpy.mock.lastCall?.[0])).toBe(
         'https://api.github.com/repos/osho210/tsugu/issues/40',
       );
       expect(fetchSpy.mock.lastCall?.[1]).toEqual(
@@ -143,7 +143,7 @@ describe('GitHubIssueHttpSource', () => {
       });
 
       expect(fetchSpy).toHaveBeenCalledTimes(2);
-      expect(String(fetchSpy.mock.calls[1]?.[0])).toBe(
+      expect(getFetchUrl(fetchSpy.mock.calls[1]?.[0])).toBe(
         'https://api.github.com/repos/new-owner/new-repository/issues/40',
       );
     });
@@ -412,6 +412,22 @@ describe('GitHubIssueHttpSource', () => {
     });
   });
 });
+
+function getFetchUrl(input: RequestInfo | URL | undefined): string | undefined {
+  if (typeof input === 'string') {
+    return input;
+  }
+
+  if (input instanceof URL) {
+    return input.href;
+  }
+
+  if (input instanceof Request) {
+    return input.url;
+  }
+
+  return undefined;
+}
 
 async function captureSourceError(promise: Promise<unknown>): Promise<GitHubIssueSourceError> {
   try {
