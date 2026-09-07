@@ -153,6 +153,10 @@ function normalizeDomain(value: string): string {
         return character;
       }
 
+      if (character === 'ß' || character === 'ẞ') {
+        return 'ss';
+      }
+
       return character.toLocaleUpperCase('und').toLocaleLowerCase('und');
     })
     .join('')
