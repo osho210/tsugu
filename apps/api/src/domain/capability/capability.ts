@@ -127,6 +127,7 @@ function normalizeDomain(value: string): string {
   return value
     .normalize('NFKC')
     .trim()
+    .toLocaleUpperCase('en-US')
     .toLocaleLowerCase('en-US')
     .replace(/\s*([+#./_-])\s*/gu, '$1')
     .replace(/[^\p{L}\p{M}\p{N}+#./_-]+/gu, '-')
