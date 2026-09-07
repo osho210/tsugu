@@ -40,6 +40,34 @@ describe('RequiredCapability', () => {
     expect(second).toBe('strasse');
   });
 
+  it('capital sharp Sをidempotentにcase foldする', () => {
+    const first = parseRequiredCapability({
+      ...validCapability,
+      domain: 'ẞ',
+    }).domain;
+    const reparsed = parseRequiredCapability({
+      ...validCapability,
+      domain: first,
+    }).domain;
+
+    expect(first).toBe('ss');
+    expect(reparsed).toBe('ss');
+  });
+
+  it('default-ignorable Unicodeをcanonical keyから除去する', () => {
+    const plain = parseRequiredCapability({
+      ...validCapability,
+      domain: 'Java',
+    }).domain;
+    const decorated = parseRequiredCapability({
+      ...validCapability,
+      domain: 'Java\uFE0F',
+    }).domain;
+
+    expect(decorated).toBe(plain);
+    expect(decorated).toBe('java');
+  });
+
   it('日本語Domainを保持して正規化する', () => {
     expect(
       parseRequiredCapability({
