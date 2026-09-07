@@ -39,6 +39,15 @@ describe('RequiredCapability', () => {
       expect(reparsed).toBe('ss');
     });
 
+    it('Turkish dotless iを含む場合、dotted iへ崩さず保持すること', () => {
+      const dotless = parseRequiredCapability(createRequiredCapability({ domain: 'sık' })).domain;
+      const dotted = parseRequiredCapability(createRequiredCapability({ domain: 'sik' })).domain;
+
+      expect(dotless).toBe('sık');
+      expect(dotted).toBe('sik');
+      expect(dotless).not.toBe(dotted);
+    });
+
     it('default-ignorable Unicodeを含む場合、除去後のcanonical keyであること', () => {
       const plain = parseRequiredCapability(createRequiredCapability({ domain: 'Java' })).domain;
       const decorated = parseRequiredCapability(
@@ -108,7 +117,7 @@ describe('RequiredCapability', () => {
       },
     );
 
-    it.each(['\u0000', '\u0085'])(
+    it.each(['\u0000', '\u0085', '\uFFF9'])(
       'Rationaleがcontrol-onlyの%sの場合、日本語のvalidation errorになること',
       (rationale) => {
         expect(() => parseRequiredCapability(createRequiredCapability({ rationale }))).toThrow(
@@ -117,7 +126,7 @@ describe('RequiredCapability', () => {
       },
     );
 
-    it.each(['\u0000', '\u0085'])(
+    it.each(['\u0000', '\u0085', '\uFFF9'])(
       'Evidence Textがcontrol-onlyの%sの場合、日本語のvalidation errorになること',
       (text) => {
         expect(() =>
