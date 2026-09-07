@@ -71,6 +71,35 @@ describe('GitHubIssueHttpSource', () => {
         htmlUrl: 'https://github.com/new-owner/new-repository/issues/40',
       });
     });
+
+    it('repository rename後にAPIがID形式URLへredirectした場合、repository_urlからcanonical identityを返すこと', async () => {
+      const response = new Response(
+        JSON.stringify({
+          number: 40,
+          title: 'Transferred repository issue',
+          body: null,
+          html_url: 'https://github.com/new-owner/new-repository/issues/40',
+          repository_url: 'https://api.github.com/repos/new-owner/new-repository',
+          labels: [],
+        }),
+        { status: 200 },
+      );
+      Object.defineProperty(response, 'url', {
+        value: 'https://api.github.com/repositories/123456/issues/40',
+      });
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(response);
+      const source = new GitHubIssueHttpSource();
+
+      await expect(source.getIssue(createGitHubIssueQuery())).resolves.toEqual({
+        owner: 'new-owner',
+        repository: 'new-repository',
+        issueNumber: 40,
+        title: 'Transferred repository issue',
+        body: null,
+        labels: [],
+        htmlUrl: 'https://github.com/new-owner/new-repository/issues/40',
+      });
+    });
   });
 
   describe('status classification', () => {
