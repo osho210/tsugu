@@ -44,6 +44,16 @@ describe('GitHubIssueHttpSource', () => {
     });
   });
 
+  it('HTTP 401をauthentication-failureへ分類する', async () => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 401 }));
+    const source = new GitHubIssueHttpSource('invalid-token');
+
+    await expect(source.getIssue(query)).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
+      kind: 'authentication-failure',
+    });
+  });
+
   it.each([404, 410])('HTTP %sをnot-foundへ分類する', async (status) => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status }));
     const source = new GitHubIssueHttpSource();
@@ -124,6 +134,17 @@ describe('GitHubIssueHttpSource', () => {
     });
   });
 
+  it('query containerがnullなら外部アクセス前にinvalid-inputとして拒否する', async () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch');
+    const source = new GitHubIssueHttpSource();
+
+    await expect(source.getIssue(null as never)).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
+      kind: 'invalid-input',
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it('dot segmentを外部アクセス前にinvalid-inputとして拒否する', async () => {
     const fetchSpy = jest.spyOn(globalThis, 'fetch');
     const source = new GitHubIssueHttpSource();
@@ -155,14 +176,41 @@ describe('GitHubIssueHttpSource', () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it('GitHub HTTPS URL以外のhtml_urlをinvalid-responseとして拒否する', async () => {
+  it('Issues APIが返したPull Requestをinvalid-responseとして拒否する', async () => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          number: 40,
+          title: 'PR disguised as issue',
+          body: null,
+          html_url: 'https://github.com/osho210/tsugu/issues/40',
+          labels: [],
+          pull_request: { url: 'https://api.github.com/repos/osho210/tsugu/pulls/40' },
+        }),
+        { status: 200 },
+      ),
+    );
+    const source = new GitHubIssueHttpSource();
+
+    await expect(source.getIssue(query)).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
+      kind: 'invalid-response',
+    });
+  });
+
+  it.each([
+    'javascript:alert(1)',
+    'https://github.com/settings/tokens',
+    'https://github.com/another/repository/issues/40',
+    'https://github.com/osho210/tsugu/issues/41',
+  ])('Issue identityと一致しないhtml_url %s をinvalid-responseとして拒否する', async (htmlUrl) => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(
         JSON.stringify({
           number: 40,
           title: 'GitHub Issue ingestionを実装する',
           body: null,
-          html_url: 'javascript:alert(1)',
+          html_url: htmlUrl,
           labels: [],
         }),
         { status: 200 },
