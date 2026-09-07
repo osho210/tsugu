@@ -6,6 +6,9 @@ import {
   validateGitHubIssueQuery,
 } from '../../application/github/github-issue-source';
 
+const GITHUB_API_ORIGIN = 'https://api.github.com';
+const MAX_REDIRECTS = 5;
+
 /** GitHub REST APIからIssueを取得するInfrastructure Adapter。 */
 export class GitHubIssueHttpSource implements GitHubIssueSource {
   /** GitHub API設定を保持してAdapterを生成する。 */
@@ -28,23 +31,10 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
       headers.Authorization = `Bearer ${this.token}`;
     }
 
-    let response: Response;
-
-    try {
-      response = await fetch(
-        `https://api.github.com/repos/${encodeURIComponent(query.owner)}/${encodeURIComponent(query.repository)}/issues/${query.issueNumber}`,
-        {
-          headers,
-          signal: AbortSignal.timeout(this.timeoutMs),
-        },
-      );
-    } catch (error) {
-      throw new GitHubIssueSourceError(
-        'temporary-failure',
-        'GitHub Issueの取得に失敗したかタイムアウトしました。',
-        { cause: error },
-      );
-    }
+    const initialUrl = new URL(
+      `https://api.github.com/repos/${encodeURIComponent(query.owner)}/${encodeURIComponent(query.repository)}/issues/${query.issueNumber}`,
+    );
+    const response = await fetchWithValidatedRedirects(initialUrl, headers, this.timeoutMs);
 
     if (response.status === 401) {
       await disposeResponseBody(response);
@@ -89,6 +79,14 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
       );
     }
 
+    if (response.status >= 400 && response.status < 500) {
+      await disposeResponseBody(response);
+      throw new GitHubIssueSourceError(
+        'invalid-response',
+        `GitHub APIが非retryableなHTTP ${response.status}を返しました。`,
+      );
+    }
+
     if (!response.ok) {
       await disposeResponseBody(response);
       throw new GitHubIssueSourceError(
@@ -102,6 +100,91 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
 
     return parseGitHubIssueResponse(identity, payload);
   }
+}
+
+async function fetchWithValidatedRedirects(
+  initialUrl: URL,
+  headers: Record<string, string>,
+  timeoutMs: number,
+): Promise<Response> {
+  let currentUrl = initialUrl;
+
+  for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
+    validateGitHubApiIssueUrl(currentUrl);
+
+    let response: Response;
+    try {
+      response = await fetch(currentUrl, {
+        headers,
+        signal: AbortSignal.timeout(timeoutMs),
+        redirect: 'manual',
+      });
+    } catch (error) {
+      throw new GitHubIssueSourceError(
+        'temporary-failure',
+        'GitHub Issueの取得に失敗したかタイムアウトしました。',
+        { cause: error },
+      );
+    }
+
+    if (!isRedirectStatus(response.status)) {
+      return response;
+    }
+
+    const location = response.headers.get('location');
+    await disposeResponseBody(response);
+
+    if (location === null) {
+      throw invalidResponse('GitHub API redirectにLocation headerがありません。');
+    }
+
+    if (redirectCount === MAX_REDIRECTS) {
+      throw invalidResponse('GitHub API redirect回数が上限を超えました。');
+    }
+
+    let redirectUrl: URL;
+    try {
+      redirectUrl = new URL(location, currentUrl);
+    } catch {
+      throw invalidResponse('GitHub API redirect先URLが不正です。');
+    }
+
+    validateGitHubApiIssueUrl(redirectUrl);
+    currentUrl = redirectUrl;
+  }
+
+  throw invalidResponse('GitHub API redirect回数が上限を超えました。');
+}
+
+function isRedirectStatus(status: number): boolean {
+  return status === 301 || status === 302 || status === 303 || status === 307 || status === 308;
+}
+
+function validateGitHubApiIssueUrl(url: URL): void {
+  if (
+    url.origin !== GITHUB_API_ORIGIN ||
+    url.username.length > 0 ||
+    url.password.length > 0 ||
+    url.search.length > 0 ||
+    url.hash.length > 0
+  ) {
+    throw invalidResponse('GitHub API redirect先URLが不正です。');
+  }
+
+  const repositoryPathMatch = /^\/repos\/([^/]+)\/([^/]+)\/issues\/(\d+)$/.exec(url.pathname);
+  if (repositoryPathMatch !== null) {
+    const issueNumber = parseCanonicalIssueNumber(repositoryPathMatch[3]);
+    validateRedirectIdentity(repositoryPathMatch[1], repositoryPathMatch[2], issueNumber);
+    return;
+  }
+
+  const repositoryIdPathMatch = /^\/repositories\/(\d+)\/issues\/(\d+)$/.exec(url.pathname);
+  if (repositoryIdPathMatch !== null) {
+    parseCanonicalIssueNumber(repositoryIdPathMatch[2]);
+    return;
+  }
+
+  throw invalidResponse('GitHub API redirect先URLがIssue endpointを示していません。');
 }
 
 function validateGitHubToken(token: string | undefined): void {
@@ -207,15 +290,7 @@ function resolveResponseIdentity(
     throw invalidResponse('GitHub API redirect先URLが不正です。');
   }
 
-  if (
-    url.origin !== 'https://api.github.com' ||
-    url.username.length > 0 ||
-    url.password.length > 0 ||
-    url.search.length > 0 ||
-    url.hash.length > 0
-  ) {
-    throw invalidResponse('GitHub API redirect先URLが不正です。');
-  }
+  validateGitHubApiIssueUrl(url);
 
   const repositoryPathMatch = /^\/repos\/([^/]+)\/([^/]+)\/issues\/(\d+)$/.exec(url.pathname);
 
@@ -267,7 +342,7 @@ function resolveIdentityFromRepositoryUrl(
   const match = /^\/repos\/([^/]+)\/([^/]+)$/.exec(repositoryUrl.pathname);
 
   if (
-    repositoryUrl.origin !== 'https://api.github.com' ||
+    repositoryUrl.origin !== GITHUB_API_ORIGIN ||
     repositoryUrl.username.length > 0 ||
     repositoryUrl.password.length > 0 ||
     repositoryUrl.search.length > 0 ||
