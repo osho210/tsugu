@@ -25,10 +25,15 @@ const child = spawn(process.execPath, [nestCliPath, ...process.argv.slice(2)], {
 
 const forwardedSignals = ['SIGINT', 'SIGTERM'];
 const signalHandlers = new Map();
+let childExited = false;
+
+child.once('exit', () => {
+  childExited = true;
+});
 
 for (const signal of forwardedSignals) {
   const handler = () => {
-    if (!child.killed) {
+    if (!childExited) {
       child.kill(signal);
     }
   };
