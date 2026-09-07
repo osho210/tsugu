@@ -93,7 +93,7 @@ export function parseRequiredCapability(value: unknown): RequiredCapability {
     throw new Error('Required CapabilityのConfidenceは0から1である必要があります。');
   }
 
-  if (typeof rationale !== 'string' || !hasVisibleText(rationale)) {
+  if (typeof rationale !== 'string' || !isSafeVisibleAuditText(rationale)) {
     throw new Error('Required CapabilityのRationaleには表示可能な文字が必要です。');
   }
 
@@ -187,18 +187,19 @@ function parseCapabilityEvidence(value: unknown): CapabilityEvidence {
     throw new Error('Capability EvidenceのSourceが不正です。');
   }
 
-  if (typeof text !== 'string' || !hasVisibleText(text)) {
+  if (typeof text !== 'string' || !isSafeVisibleAuditText(text)) {
     throw new Error('Capability EvidenceのTextには表示可能な文字が必要です。');
   }
 
   return { source, text: text.trim() };
 }
 
-function hasVisibleText(value: string): boolean {
-  return value
-    .replace(/[\p{Default_Ignorable_Code_Point}\p{Cc}\p{Cf}]/gu, '')
-    .trim()
-    .length > 0;
+function isSafeVisibleAuditText(value: string): boolean {
+  if (/[\p{Default_Ignorable_Code_Point}\p{Cc}\p{Cf}]/u.test(value)) {
+    return false;
+  }
+
+  return value.trim().length > 0;
 }
 
 function isCapabilityRole(value: unknown): value is CapabilityRole {
