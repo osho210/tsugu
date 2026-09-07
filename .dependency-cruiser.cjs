@@ -137,6 +137,10 @@ module.exports = {
       path: ['node_modules'],
     },
 
+    tsConfig: {
+      fileName: 'tsconfig.dependency-cruiser.json',
+    },
+
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'node', 'default', 'types'],
