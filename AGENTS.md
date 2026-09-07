@@ -16,6 +16,8 @@ Project rules live under `docs/rules/`.
 
 Harness behavior lives under `docs/harness/`.
 
+Reusable implementation/review workflows live under `docs/skills/`.
+
 Read only the documentation relevant to the files being changed.
 
 ## Before implementation
@@ -23,6 +25,16 @@ Read only the documentation relevant to the files being changed.
 - Understand the requirement.
 - Inspect the relevant existing code.
 - For complex changes, create a short implementation plan.
+
+## Human review feedback
+
+Human review feedback has high priority. When a comment expresses a reusable quality rule, do not stop at the commented line or PR.
+
+Follow:
+
+- `docs/skills/human-review-feedback.md`
+
+Apply the underlying invariant to analogous active PRs where it is safe and independent, and promote durable conventions into `docs/rules/` or the harness.
 
 ## Before completion
 
