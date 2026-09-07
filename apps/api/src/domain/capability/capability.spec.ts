@@ -1,153 +1,117 @@
+import { createRequiredCapability } from '../../test/factories/required-capability.factory';
 import {
   parseRequiredCapabilities,
   parseRequiredCapability,
 } from './capability';
 
 describe('RequiredCapability', () => {
-  const validCapability = {
-    domain: 'Database',
-    role: 'Implementation',
-    requiredLevel: 3,
-    importance: 'required',
-    confidence: 0.9,
-    rationale: 'Schema変更とquery実装が必要なため',
-    evidence: [
-      {
-        source: 'issue-body',
-        text: 'PostgreSQL schemaを変更する',
-      },
-    ],
-  };
+  describe('Domain canonicalization', () => {
+    it('英字Domainの場合、小文字のcanonical keyであること', () => {
+      expect(parseRequiredCapability(createRequiredCapability())).toEqual({
+        domain: 'database',
+        role: 'Implementation',
+        requiredLevel: 3,
+        importance: 'required',
+        confidence: 0.9,
+        rationale: 'Schema変更とquery実装が必要なため',
+        evidence: [
+          {
+            source: 'issue-body',
+            text: 'PostgreSQL schemaを変更する',
+          },
+        ],
+      });
+    });
 
-  it('Domainをcanonical keyへ正規化する', () => {
-    expect(parseRequiredCapability(validCapability)).toEqual({
-      ...validCapability,
-      domain: 'database',
+    it('Unicodeの大文字小文字違いの場合、同じcanonical keyであること', () => {
+      const first = parseRequiredCapability(createRequiredCapability({ domain: 'Straße' })).domain;
+      const second = parseRequiredCapability(createRequiredCapability({ domain: 'STRASSE' })).domain;
+
+      expect(first).toBe('strasse');
+      expect(second).toBe('strasse');
+    });
+
+    it('capital sharp Sを再parseした場合、同じcanonical keyであること', () => {
+      const first = parseRequiredCapability(createRequiredCapability({ domain: 'ẞ' })).domain;
+      const reparsed = parseRequiredCapability(createRequiredCapability({ domain: first })).domain;
+
+      expect(first).toBe('ss');
+      expect(reparsed).toBe('ss');
+    });
+
+    it('default-ignorable Unicodeを含む場合、除去後のcanonical keyであること', () => {
+      const plain = parseRequiredCapability(createRequiredCapability({ domain: 'Java' })).domain;
+      const decorated = parseRequiredCapability(
+        createRequiredCapability({ domain: 'Java\uFE0F' }),
+      ).domain;
+
+      expect(plain).toBe('java');
+      expect(decorated).toBe('java');
+    });
+
+    it('日本語Domainの場合、日本語を保持したcanonical keyであること', () => {
+      expect(
+        parseRequiredCapability(createRequiredCapability({ domain: ' データベース ' })).domain,
+      ).toBe('データベース');
+    });
+
+    it.each([
+      ['C', 'c'],
+      ['C++', 'c++'],
+      ['C#', 'c#'],
+      ['Node.js', 'node.js'],
+    ])('%sの場合、識別に必要なpunctuationを保持した%sであること', (domain, expected) => {
+      expect(parseRequiredCapability(createRequiredCapability({ domain })).domain).toBe(expected);
+    });
+
+    it('punctuation周辺に空白がある場合、空白を除いたcanonical keyであること', () => {
+      expect(parseRequiredCapability(createRequiredCapability({ domain: ' CI / CD ' })).domain).toBe(
+        'ci/cd',
+      );
+    });
+
+    it('Unicode combining markが異なる場合、別canonical keyであること', () => {
+      const first = parseRequiredCapability(createRequiredCapability({ domain: 'का' })).domain;
+      const second = parseRequiredCapability(createRequiredCapability({ domain: 'कि' })).domain;
+
+      expect(first).toBe('का');
+      expect(second).toBe('कि');
+      expect(first).not.toBe(second);
     });
   });
 
-  it('Unicode casing variantを同じcanonical keyへ正規化する', () => {
-    const first = parseRequiredCapability({
-      ...validCapability,
-      domain: 'Straße',
-    }).domain;
-    const second = parseRequiredCapability({
-      ...validCapability,
-      domain: 'STRASSE',
-    }).domain;
+  describe('validation', () => {
+    it.each(['!!!', '+++', '###', '.', '/', '_'])(
+      'Domainが%sだけの場合、日本語のvalidation errorになること',
+      (domain) => {
+        expect(() => parseRequiredCapability(createRequiredCapability({ domain }))).toThrow(
+          'Required CapabilityのDomainには文字または数字が必要です。',
+        );
+      },
+    );
 
-    expect(first).toBe('strasse');
-    expect(second).toBe('strasse');
-  });
-
-  it('capital sharp Sをidempotentにcase foldする', () => {
-    const first = parseRequiredCapability({
-      ...validCapability,
-      domain: 'ẞ',
-    }).domain;
-    const reparsed = parseRequiredCapability({
-      ...validCapability,
-      domain: first,
-    }).domain;
-
-    expect(first).toBe('ss');
-    expect(reparsed).toBe('ss');
-  });
-
-  it('default-ignorable Unicodeをcanonical keyから除去する', () => {
-    const plain = parseRequiredCapability({
-      ...validCapability,
-      domain: 'Java',
-    }).domain;
-    const decorated = parseRequiredCapability({
-      ...validCapability,
-      domain: 'Java\uFE0F',
-    }).domain;
-
-    expect(decorated).toBe(plain);
-    expect(decorated).toBe('java');
-  });
-
-  it('日本語Domainを保持して正規化する', () => {
-    expect(
-      parseRequiredCapability({
-        ...validCapability,
-        domain: ' データベース ',
-      }).domain,
-    ).toBe('データベース');
-  });
-
-  it.each([
-    ['C', 'c'],
-    ['C++', 'c++'],
-    ['C#', 'c#'],
-    ['Node.js', 'node.js'],
-  ])('識別に必要なDomain punctuationを保持する: %s', (domain, expected) => {
-    expect(
-      parseRequiredCapability({
-        ...validCapability,
-        domain,
-      }).domain,
-    ).toBe(expected);
-  });
-
-  it('retained punctuation周辺の空白をcanonicalizeする', () => {
-    expect(
-      parseRequiredCapability({
-        ...validCapability,
-        domain: ' CI / CD ',
-      }).domain,
-    ).toBe('ci/cd');
-  });
-
-  it('Unicode combining markを保持する', () => {
-    const first = parseRequiredCapability({
-      ...validCapability,
-      domain: 'का',
-    }).domain;
-    const second = parseRequiredCapability({
-      ...validCapability,
-      domain: 'कि',
-    }).domain;
-
-    expect(first).toBe('का');
-    expect(second).toBe('कि');
-    expect(first).not.toBe(second);
-  });
-
-  it.each(['!!!', '+++', '###', '.', '/', '_'])(
-    'letters/numbersを含まないDomain %s を拒否する',
-    (domain) => {
+    it.each([0, 6])('Required Levelが%sの場合、日本語のvalidation errorになること', (requiredLevel) => {
       expect(() =>
         parseRequiredCapability({
-          ...validCapability,
-          domain,
+          ...createRequiredCapability(),
+          requiredLevel,
         }),
-      ).toThrow('Required Capability domain must contain letters or numbers.');
-    },
-  );
+      ).toThrow('Required CapabilityのLevelは1から5である必要があります。');
+    });
 
-  it.each([0, 6])('Required Level %s を拒否する', (requiredLevel) => {
-    expect(() =>
-      parseRequiredCapability({
-        ...validCapability,
-        requiredLevel,
-      }),
-    ).toThrow('Required Capability level must be between 1 and 5.');
-  });
-
-  it.each([-0.1, 1.1, Number.NaN])('Confidence %s を拒否する', (confidence) => {
-    expect(() =>
-      parseRequiredCapability({
-        ...validCapability,
-        confidence,
-      }),
-    ).toThrow('Required Capability confidence must be between 0 and 1.');
-  });
-
-  it('配列以外のProvider出力を拒否する', () => {
-    expect(() => parseRequiredCapabilities(validCapability)).toThrow(
-      'Required Capability output must be an array.',
+    it.each([-0.1, 1.1, Number.NaN])(
+      'Confidenceが%sの場合、日本語のvalidation errorになること',
+      (confidence) => {
+        expect(() => parseRequiredCapability(createRequiredCapability({ confidence }))).toThrow(
+          'Required CapabilityのConfidenceは0から1である必要があります。',
+        );
+      },
     );
+
+    it('Provider出力が配列以外の場合、日本語のvalidation errorになること', () => {
+      expect(() => parseRequiredCapabilities(createRequiredCapability())).toThrow(
+        'Required CapabilityのProvider出力は配列である必要があります。',
+      );
+    });
   });
 });
