@@ -66,7 +66,7 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
         throw new GitHubIssueSourceError('rate-limit', 'GitHub APIのrate limitを超過しました。');
       }
 
-      if (isPermissionDeniedMessage(errorMessage)) {
+      if (isAuthenticationDeniedResponse(response, errorMessage)) {
         await disposeResponseBody(response);
         throw new GitHubIssueSourceError(
           'authentication-failure',
@@ -161,7 +161,11 @@ function isRateLimitMessage(message: string | null): boolean {
   return normalized.includes('secondary rate limit') || normalized.includes('abuse detection');
 }
 
-function isPermissionDeniedMessage(message: string | null): boolean {
+function isAuthenticationDeniedResponse(response: Response, message: string | null): boolean {
+  if (response.headers.get('x-github-sso')?.toLocaleLowerCase('en-US').includes('required')) {
+    return true;
+  }
+
   if (message === null) {
     return false;
   }
@@ -169,7 +173,8 @@ function isPermissionDeniedMessage(message: string | null): boolean {
   const normalized = message.toLocaleLowerCase('en-US');
   return (
     normalized.includes('resource not accessible by personal access token') ||
-    normalized.includes('resource not accessible by integration')
+    normalized.includes('resource not accessible by integration') ||
+    normalized.includes('resource protected by organization saml enforcement')
   );
 }
 
@@ -197,27 +202,32 @@ function resolveResponseIdentity(
   const repositoryPathMatch = /^\/repos\/([^/]+)\/([^/]+)\/issues\/(\d+)$/.exec(url.pathname);
 
   if (repositoryPathMatch !== null) {
-    if (Number(repositoryPathMatch[3]) !== query.issueNumber) {
-      return query;
-    }
-
+    const canonicalIssueNumber = parseCanonicalIssueNumber(repositoryPathMatch[3]);
     return validateRedirectIdentity(
       repositoryPathMatch[1],
       repositoryPathMatch[2],
-      query.issueNumber,
+      canonicalIssueNumber,
     );
   }
 
   const repositoryIdPathMatch = /^\/repositories\/(\d+)\/issues\/(\d+)$/.exec(url.pathname);
 
-  if (
-    repositoryIdPathMatch === null ||
-    Number(repositoryIdPathMatch[2]) !== query.issueNumber
-  ) {
+  if (repositoryIdPathMatch === null) {
     return query;
   }
 
-  return resolveIdentityFromRepositoryUrl(payload, query.issueNumber);
+  const canonicalIssueNumber = parseCanonicalIssueNumber(repositoryIdPathMatch[2]);
+  return resolveIdentityFromRepositoryUrl(payload, canonicalIssueNumber);
+}
+
+function parseCanonicalIssueNumber(value: string): number {
+  const issueNumber = Number(value);
+
+  if (!Number.isSafeInteger(issueNumber) || issueNumber <= 0) {
+    throw invalidResponse('GitHub API redirect先のIssue番号が不正です。');
+  }
+
+  return issueNumber;
 }
 
 function resolveIdentityFromRepositoryUrl(
