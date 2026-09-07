@@ -80,20 +80,24 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
 }
 
 async function readJsonBody(response: Response): Promise<unknown> {
-  try {
-    return await response.json();
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new GitHubIssueSourceError(
-        'invalid-response',
-        'GitHub Issue response body was not valid JSON.',
-        { cause: error },
-      );
-    }
+  let body: string;
 
+  try {
+    body = await response.text();
+  } catch (error) {
     throw new GitHubIssueSourceError(
       'temporary-failure',
       'GitHub Issue response body could not be read.',
+      { cause: error },
+    );
+  }
+
+  try {
+    return JSON.parse(body) as unknown;
+  } catch (error) {
+    throw new GitHubIssueSourceError(
+      'invalid-response',
+      'GitHub Issue response body was not valid JSON.',
       { cause: error },
     );
   }
