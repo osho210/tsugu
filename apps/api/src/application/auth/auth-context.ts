@@ -1,7 +1,7 @@
 /**
  * MVPで利用する認証Provider。
  */
-export type AuthProvider = 'clerk';
+type AuthProvider = 'clerk';
 
 /**
  * Applicationへ渡す認証済みUser identity。
