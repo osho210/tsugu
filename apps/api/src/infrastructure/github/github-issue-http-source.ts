@@ -189,8 +189,7 @@ function resolveResponseIdentity(response: Response, query: GitHubIssueQuery): G
   const match = /^\/repos\/([^/]+)\/([^/]+)\/issues\/(\d+)$/.exec(url.pathname);
 
   if (
-    url.protocol !== 'https:' ||
-    url.hostname !== 'api.github.com' ||
+    url.origin !== 'https://api.github.com' ||
     match === null ||
     Number(match[3]) !== query.issueNumber
   ) {
@@ -268,8 +267,7 @@ function isGitHubIssueHtmlUrl(value: unknown, query: GitHubIssueQuery): value is
     const url = new URL(value);
     const expectedPath = `/${query.owner}/${query.repository}/issues/${query.issueNumber}`;
     return (
-      url.protocol === 'https:' &&
-      url.hostname === 'github.com' &&
+      url.origin === 'https://github.com' &&
       url.pathname.toLocaleLowerCase('en-US') === expectedPath.toLocaleLowerCase('en-US') &&
       url.search.length === 0 &&
       url.hash.length === 0
