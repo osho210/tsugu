@@ -8,9 +8,13 @@ const nodeOptions = existingNodeOptions
   ? `${existingNodeOptions} ${preloadOption}`
   : preloadOption;
 
-const nestCliPath = fileURLToPath(
+const defaultNestCliPath = fileURLToPath(
   new URL('./node_modules/@nestjs/cli/bin/nest.js', import.meta.url),
 );
+const nestCliPath =
+  process.env.NODE_ENV === 'test' && process.env.TSUGU_NEST_CLI_PATH
+    ? process.env.TSUGU_NEST_CLI_PATH
+    : defaultNestCliPath;
 const child = spawn(process.execPath, [nestCliPath, ...process.argv.slice(2)], {
   env: {
     ...process.env,
