@@ -109,7 +109,7 @@ function validateGitHubToken(token: string | undefined): void {
     return;
   }
 
-  if (/\p{Cc}/u.test(token)) {
+  if (!/^[\x20-\x7E]+$/.test(token)) {
     throw new GitHubIssueSourceError(
       'authentication-failure',
       'GitHub API tokenの形式が不正です。',
