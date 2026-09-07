@@ -21,10 +21,11 @@ export class FixtureCapabilityExtractor implements CapabilityExtractor {
   }
 
   /**
-   * 設定済みfixtureを返す。入力はProvider差し替え時と同じcontractを維持する。
+   * 設定済みfixtureを独立したsnapshotとして返す。
+   * 入力はProvider差し替え時と同じcontractを維持する。
    */
   extract(input: CapabilityExtractionInput): Promise<readonly RequiredCapability[]> {
     void input;
-    return Promise.resolve(this.fixture);
+    return Promise.resolve(parseRequiredCapabilities(this.fixture));
   }
 }
