@@ -6,7 +6,7 @@ module.exports = {
   options: {
     ...baseConfig.options,
     tsConfig: {
-      fileName: 'apps/web/tsconfig.json',
+      fileName: 'tsconfig.dependency-cruiser.web.json',
     },
   },
 };
