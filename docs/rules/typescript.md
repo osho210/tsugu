@@ -17,7 +17,7 @@
 - Prefer full-object expectations when a test verifies an object contract. Use partial matching only when the omitted fields are intentionally irrelevant.
 - Reuse generated Prisma types for persistence-layer code when they exactly represent the persistence shape instead of duplicating those types.
 - Normalize request strings only at a Presentation/request boundary that knows the field semantics. Use field-aware DTO transforms or an explicit allowlist for fields where trimming is part of the contract; never apply generic request-wide trimming to opaque or whitespace-significant values such as passwords, tokens, signatures, encoded data, or content whose whitespace can carry meaning.
-- Avoid extracting one-use private helpers that do not represent a separate concept. Put genuinely reusable helpers/guards in an appropriate shared module, and prefer one shared generic guard over repeated copies of the same structural guard.
+- Avoid extracting one-use private helpers that do not represent a separate concept. Put genuinely reusable helpers/guards in an appropriate shared module, prefer one shared generic guard over repeated copies of the same structural guard, and directly test the shared helper/guard at that boundary.
 - After the API alias foundation is available, use `@/` for cross-directory imports so imports do not depend on directory depth. Same-directory imports may remain relative when they improve local readability.
 
 ## MAY
