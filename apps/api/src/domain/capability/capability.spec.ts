@@ -19,7 +19,7 @@ describe('RequiredCapability', () => {
     ],
   };
 
-  it('Domainをcanonical slugへ正規化する', () => {
+  it('Domainをcanonical keyへ正規化する', () => {
     expect(parseRequiredCapability(validCapability)).toEqual({
       ...validCapability,
       domain: 'database',
@@ -33,6 +33,20 @@ describe('RequiredCapability', () => {
         domain: ' データベース ',
       }).domain,
     ).toBe('データベース');
+  });
+
+  it.each([
+    ['C', 'c'],
+    ['C++', 'c++'],
+    ['C#', 'c#'],
+    ['Node.js', 'node.js'],
+  ])('識別に必要なDomain punctuationを保持する: %s', (domain, expected) => {
+    expect(
+      parseRequiredCapability({
+        ...validCapability,
+        domain,
+      }).domain,
+    ).toBe(expected);
   });
 
   it('正規化後に空になるDomainを拒否する', () => {
