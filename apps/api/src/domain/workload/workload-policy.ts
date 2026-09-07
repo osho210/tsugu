@@ -39,11 +39,11 @@ export function validateWorkloadPolicy(policy: WorkloadPolicy): void {
   const values = [policy.target, policy.warning, policy.limit];
 
   if (values.some((value) => !Number.isFinite(value) || value < 0)) {
-    throw new Error('Workload thresholds must be finite non-negative numbers.');
+    throw new Error('Workload閾値は有限の0以上の数値である必要があります。');
   }
 
   if (!(policy.target < policy.warning && policy.warning <= policy.limit)) {
-    throw new Error('Workload thresholds must satisfy target < warning <= limit.');
+    throw new Error('Workload閾値はtarget < warning <= limitを満たす必要があります。');
   }
 }
 
@@ -63,7 +63,7 @@ export function calculateWorkload(
     predictedWorkloadHours < 0 ||
     availableHours < 0
   ) {
-    throw new Error('Workload hours must be finite non-negative numbers.');
+    throw new Error('Workload時間は有限の0以上の数値である必要があります。');
   }
 
   if (availableHours === 0) {
@@ -73,7 +73,7 @@ export function calculateWorkload(
   const rawPercentage = (predictedWorkloadHours / availableHours) * 100;
 
   if (!Number.isFinite(rawPercentage)) {
-    throw new Error('Calculated workload percentage must be finite.');
+    throw new Error('算定したWorkload percentageは有限値である必要があります。');
   }
 
   return {
@@ -91,7 +91,7 @@ export function calculateLoadFitness(workload: WorkloadResult): number {
   }
 
   if (!Number.isFinite(workload.percentage) || workload.percentage < 0) {
-    throw new Error('Workload percentage must be a finite non-negative number.');
+    throw new Error('Workload percentageは有限の0以上の数値である必要があります。');
   }
 
   const percentage = normalizePercentage(workload.percentage);
