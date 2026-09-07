@@ -181,7 +181,10 @@ function parseCapabilityEvidence(value: unknown): CapabilityEvidence {
 }
 
 function hasVisibleText(value: string): boolean {
-  return value.replace(/\p{Default_Ignorable_Code_Point}/gu, '').trim().length > 0;
+  return value
+    .replace(/[\p{Default_Ignorable_Code_Point}\p{Cc}]/gu, '')
+    .trim()
+    .length > 0;
 }
 
 function isCapabilityRole(value: unknown): value is CapabilityRole {
