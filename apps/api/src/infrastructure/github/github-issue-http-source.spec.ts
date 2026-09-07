@@ -44,8 +44,8 @@ describe('GitHubIssueHttpSource', () => {
     });
   });
 
-  it('404をnot-foundへ分類する', async () => {
-    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 404 }));
+  it.each([404, 410])('HTTP %sをnot-foundへ分類する', async (status) => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status }));
     const source = new GitHubIssueHttpSource();
 
     await expect(source.getIssue(query)).rejects.toMatchObject({
@@ -54,7 +54,7 @@ describe('GitHubIssueHttpSource', () => {
     });
   });
 
-  it('secondary rate limitの403をrate-limitへ分類する', async () => {
+  it('Retry-After付きsecondary rate limitの403をrate-limitへ分類する', async () => {
     jest.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(null, {
         status: 403,
@@ -63,6 +63,23 @@ describe('GitHubIssueHttpSource', () => {
           'x-ratelimit-remaining': '10',
         },
       }),
+    );
+    const source = new GitHubIssueHttpSource();
+
+    await expect(source.getIssue(query)).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
+      kind: 'rate-limit',
+    });
+  });
+
+  it('headerなしsecondary rate limit payloadの403をrate-limitへ分類する', async () => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          message: 'You have exceeded a secondary rate limit. Please wait a few minutes before you try again.',
+        }),
+        { status: 403 },
+      ),
     );
     const source = new GitHubIssueHttpSource();
 
@@ -83,9 +100,7 @@ describe('GitHubIssueHttpSource', () => {
   });
 
   it('malformed JSONをinvalid-responseへ分類する', async () => {
-    jest
-      .spyOn(globalThis, 'fetch')
-      .mockResolvedValue(new Response('{', { status: 200 }));
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{', { status: 200 }));
     const source = new GitHubIssueHttpSource();
 
     await expect(source.getIssue(query)).rejects.toMatchObject({
@@ -123,5 +138,41 @@ describe('GitHubIssueHttpSource', () => {
       kind: 'invalid-input',
     });
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('non-string repository識別子を外部アクセス前にinvalid-inputとして拒否する', async () => {
+    const fetchSpy = jest.spyOn(globalThis, 'fetch');
+    const source = new GitHubIssueHttpSource();
+    const runtimeInput: unknown = {
+      ...query,
+      owner: 123,
+    };
+
+    await expect(source.getIssue(runtimeInput as never)).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
+      kind: 'invalid-input',
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('GitHub HTTPS URL以外のhtml_urlをinvalid-responseとして拒否する', async () => {
+    jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          number: 40,
+          title: 'GitHub Issue ingestionを実装する',
+          body: null,
+          html_url: 'javascript:alert(1)',
+          labels: [],
+        }),
+        { status: 200 },
+      ),
+    );
+    const source = new GitHubIssueHttpSource();
+
+    await expect(source.getIssue(query)).rejects.toMatchObject({
+      name: 'GitHubIssueSourceError',
+      kind: 'invalid-response',
+    });
   });
 });
