@@ -192,11 +192,17 @@ function resolveResponseIdentity(
   try {
     url = new URL(response.url);
   } catch {
-    return query;
+    throw invalidResponse('GitHub API redirect先URLが不正です。');
   }
 
-  if (url.origin !== 'https://api.github.com') {
-    return query;
+  if (
+    url.origin !== 'https://api.github.com' ||
+    url.username.length > 0 ||
+    url.password.length > 0 ||
+    url.search.length > 0 ||
+    url.hash.length > 0
+  ) {
+    throw invalidResponse('GitHub API redirect先URLが不正です。');
   }
 
   const repositoryPathMatch = /^\/repos\/([^/]+)\/([^/]+)\/issues\/(\d+)$/.exec(url.pathname);
@@ -213,7 +219,7 @@ function resolveResponseIdentity(
   const repositoryIdPathMatch = /^\/repositories\/(\d+)\/issues\/(\d+)$/.exec(url.pathname);
 
   if (repositoryIdPathMatch === null) {
-    return query;
+    throw invalidResponse('GitHub API redirect先URLがIssue endpointを示していません。');
   }
 
   const canonicalIssueNumber = parseCanonicalIssueNumber(repositoryIdPathMatch[2]);
@@ -250,6 +256,8 @@ function resolveIdentityFromRepositoryUrl(
 
   if (
     repositoryUrl.origin !== 'https://api.github.com' ||
+    repositoryUrl.username.length > 0 ||
+    repositoryUrl.password.length > 0 ||
     repositoryUrl.search.length > 0 ||
     repositoryUrl.hash.length > 0 ||
     match === null
@@ -337,6 +345,8 @@ function isGitHubIssueHtmlUrl(value: unknown, query: GitHubIssueQuery): value is
     const expectedPath = `/${query.owner}/${query.repository}/issues/${query.issueNumber}`;
     return (
       url.origin === 'https://github.com' &&
+      url.username.length === 0 &&
+      url.password.length === 0 &&
       url.pathname.toLocaleLowerCase('en-US') === expectedPath.toLocaleLowerCase('en-US') &&
       url.search.length === 0 &&
       url.hash.length === 0
