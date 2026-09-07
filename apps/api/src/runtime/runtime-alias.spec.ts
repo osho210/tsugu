@@ -80,6 +80,50 @@ describe('API runtime alias', () => {
         rmSync(fixtureDirectory, { recursive: true, force: true });
       }
     });
+
+    it('childが最初のSIGTERM後も生存する場合、後続SIGINTも転送すること', async () => {
+      const fixtureDirectory = mkdtempSync(join(tmpdir(), 'tsugu-start-nest-escalation-'));
+      const pidFile = join(fixtureDirectory, 'child.pid');
+      const termFile = join(fixtureDirectory, 'sigterm.received');
+      const intFile = join(fixtureDirectory, 'sigint.received');
+      const fakeNestCli = join(fixtureDirectory, 'fake-nest.mjs');
+      writeFileSync(
+        fakeNestCli,
+        `import { writeFileSync } from 'node:fs';\nwriteFileSync(${JSON.stringify(pidFile)}, String(process.pid));\nprocess.on('SIGTERM', () => writeFileSync(${JSON.stringify(termFile)}, 'received'));\nprocess.on('SIGINT', () => { writeFileSync(${JSON.stringify(intFile)}, 'received'); process.exit(0); });\nsetInterval(() => {}, 1_000);\n`,
+      );
+
+      const wrapper = spawn(process.execPath, [join(apiRoot, 'start-nest.mjs'), 'start'], {
+        cwd: apiRoot,
+        env: {
+          ...process.env,
+          NODE_ENV: 'test',
+          TSUGU_NEST_CLI_PATH: fakeNestCli,
+        },
+        stdio: 'ignore',
+      });
+
+      try {
+        await waitForFile(pidFile);
+        const childPid = Number(readFileSync(pidFile, 'utf-8'));
+
+        wrapper.kill('SIGTERM');
+        await waitForFile(termFile);
+        expect(isProcessAlive(childPid)).toBe(true);
+
+        wrapper.kill('SIGINT');
+        const result = await waitForExit(wrapper);
+
+        expect(result.code).toBe(0);
+        expect(result.signal).toBeNull();
+        expect(existsSync(intFile)).toBe(true);
+        expect(isProcessAlive(childPid)).toBe(false);
+      } finally {
+        if (!wrapper.killed) {
+          wrapper.kill('SIGKILL');
+        }
+        rmSync(fixtureDirectory, { recursive: true, force: true });
+      }
+    });
   });
 });
 
