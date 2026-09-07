@@ -69,7 +69,7 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
       );
     }
 
-    if (response.status >= 500 || response.status === 429) {
+    if (response.status >= 500 || response.status === 408 || response.status === 429) {
       await disposeResponseBody(response);
       throw new GitHubIssueSourceError(
         response.status === 429 ? 'rate-limit' : 'temporary-failure',
@@ -108,6 +108,7 @@ async function fetchWithValidatedRedirects(
   timeoutMs: number,
 ): Promise<Response> {
   let currentUrl = initialUrl;
+  const signal = AbortSignal.timeout(timeoutMs);
 
   for (let redirectCount = 0; redirectCount <= MAX_REDIRECTS; redirectCount += 1) {
     validateGitHubApiIssueUrl(currentUrl);
@@ -116,7 +117,7 @@ async function fetchWithValidatedRedirects(
     try {
       response = await fetch(currentUrl, {
         headers,
-        signal: AbortSignal.timeout(timeoutMs),
+        signal,
         redirect: 'manual',
       });
     } catch (error) {
