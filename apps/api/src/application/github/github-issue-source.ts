@@ -27,6 +27,7 @@ export type GitHubIssueSourceErrorKind =
   | 'invalid-input'
   | 'not-found'
   | 'rate-limit'
+  | 'authentication-failure'
   | 'temporary-failure'
   | 'invalid-response';
 
@@ -60,6 +61,10 @@ export type GitHubIssueSource = {
  * @throws queryがGitHub repository/Issue識別子として不正な場合。
  */
 export function validateGitHubIssueQuery(query: GitHubIssueQuery): void {
+  if (typeof query !== 'object' || query === null) {
+    throw new GitHubIssueSourceError('invalid-input', 'GitHub issue query must be an object.');
+  }
+
   const repositoryPart = /^[A-Za-z0-9_.-]+$/;
 
   if (
