@@ -21,7 +21,7 @@ Behavior-changing code SHOULD include appropriate tests.
 
 Do not make unrelated refactoring unless it is necessary for the requested change.
 
-When Human review feedback describes a reusable convention, treat it as high priority and follow `docs/skills/human-review-feedback.md`: fix the concrete occurrence, inspect analogous active PRs, and promote durable guidance into rules/harness without violating architecture or product boundaries.
+When Human review feedback describes a reusable convention, treat it as high priority and follow `docs/skills/human-review-feedback.md`: fix the concrete occurrence only after confirming it is still applicable to the current head, inspect analogous active PRs when the underlying invariant remains valid, and promote durable guidance into rules/harness without violating governing repository constraints.
 
 ## Verification
 
