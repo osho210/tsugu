@@ -44,7 +44,9 @@ export type EffectiveValue<T> = {
 
 /**
  * Human overrideを監査可能な形で生成する。
- * correctedAtは有効なISO 8601 timestampを受理し、UTC millisecond形式へ正規化する。
+ * correctedAtはISO 8601 extended date-timeのうち、本contractが明示的に対応する
+ * `YYYY-MM-DDTHH:mm:ss[.fraction](Z|±HH:mm)` profileを受理してUTC millisecond形式へ正規化する。
+ * `24:00:00`は受理する一方、JavaScript Dateで安定して表現できないleap second (`:60`) は対象外とする。
  *
  * @throws actor、reason、correctedAtが監査情報として不正な場合。
  */
@@ -67,7 +69,7 @@ export function createHumanOverride<T>(input: {
   }
 
   if (correctedAt === null) {
-    throw new Error('Human overrideのcorrectedAtは有効なISO timestampである必要があります。');
+    throw new Error('Human overrideのcorrectedAtはサポート対象のISO timestampである必要があります。');
   }
 
   return {
