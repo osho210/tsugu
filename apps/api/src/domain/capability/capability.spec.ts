@@ -108,6 +108,28 @@ describe('RequiredCapability', () => {
       },
     );
 
+    it.each(['\u0000', '\u0085'])(
+      'Rationaleがcontrol-onlyの%sの場合、日本語のvalidation errorになること',
+      (rationale) => {
+        expect(() => parseRequiredCapability(createRequiredCapability({ rationale }))).toThrow(
+          'Required CapabilityのRationaleには表示可能な文字が必要です。',
+        );
+      },
+    );
+
+    it.each(['\u0000', '\u0085'])(
+      'Evidence Textがcontrol-onlyの%sの場合、日本語のvalidation errorになること',
+      (text) => {
+        expect(() =>
+          parseRequiredCapability(
+            createRequiredCapability({
+              evidence: [{ source: 'issue-body', text }],
+            }),
+          ),
+        ).toThrow('Capability EvidenceのTextには表示可能な文字が必要です。');
+      },
+    );
+
     it('Evidence配列に欠損要素がある場合、日本語のvalidation errorになること', () => {
       expect(() =>
         parseRequiredCapability(
