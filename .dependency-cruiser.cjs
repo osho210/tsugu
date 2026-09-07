@@ -138,7 +138,7 @@ module.exports = {
     },
 
     tsConfig: {
-      fileName: 'apps/api/tsconfig.json',
+      fileName: 'tsconfig.dependency-cruiser.json',
     },
 
     enhancedResolveOptions: {
