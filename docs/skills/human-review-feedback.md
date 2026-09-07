@@ -53,4 +53,10 @@ Human review feedback is not treated as a one-off patch request. When feedback d
 
 ## Review completion
 
-A Human review thread is complete only when the concrete issue is fixed or a documented governing repository constraint explains why the exact requested mechanism is unsafe. Governing constraints include architecture, product, security, database, migration, privacy, permissions, and quality gates. In the latter case, preserve the reviewer's intent with the safest compatible implementation where possible and record the reason in the thread; never weaken or bypass a governing constraint merely to close a review thread.
+A Human review thread is complete when one of the following is verified and recorded:
+
+- the concrete issue is fixed;
+- investigation shows the requested behavior is already satisfied or the feedback is factually inapplicable to the current head, with the evidence recorded in the thread; or
+- a documented governing repository constraint explains why the exact requested mechanism is unsafe.
+
+Governing constraints include architecture, product, security, database, migration, privacy, permissions, and quality gates. When a governing constraint prevents the requested mechanism, preserve the reviewer's intent with the safest compatible implementation where possible and record the reason in the thread. Never make an unnecessary code change merely to close stale or factually invalid feedback, and never weaken or bypass a governing constraint merely to close a review thread.
