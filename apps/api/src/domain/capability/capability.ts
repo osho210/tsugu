@@ -126,8 +126,9 @@ export function parseRequiredCapabilities(value: unknown): readonly RequiredCapa
 function normalizeDomain(value: string): string {
   return value
     .normalize('NFKC')
+    .replace(/\p{Default_Ignorable_Code_Point}/gu, '')
     .trim()
-    .toLocaleUpperCase('en-US')
+    .replace(/[ßẞ]/gu, 'ss')
     .toLocaleLowerCase('en-US')
     .replace(/\s*([+#./_-])\s*/gu, '$1')
     .replace(/[^\p{L}\p{M}\p{N}+#./_-]+/gu, '-')
