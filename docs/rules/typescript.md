@@ -6,6 +6,7 @@
 - Do not use type assertions as a substitute for runtime validation.
 - User-facing validation and exception messages must be written in Japanese.
 - Do not import Prisma-generated persistence types into Domain or Application. Map persistence shapes at the Infrastructure boundary instead.
+- Do not introduce project-root aliases in an individual feature PR before the shared alias configuration supports typecheck, tests, build, and production runtime.
 
 ## SHOULD
 
@@ -17,6 +18,7 @@
 - Reuse generated Prisma types for persistence-layer code when they exactly represent the persistence shape instead of duplicating those types.
 - Keep cross-cutting request normalization such as trimming in Presentation/request-boundary infrastructure rather than repeating it field-by-field in Application or Domain.
 - Avoid extracting one-use private helpers that do not represent a separate concept. Put genuinely reusable helpers/guards in an appropriate shared module.
+- After the API alias foundation is available, use `@/` for cross-directory imports so imports do not depend on directory depth. Same-directory imports may remain relative when they improve local readability.
 
 ## MAY
 
