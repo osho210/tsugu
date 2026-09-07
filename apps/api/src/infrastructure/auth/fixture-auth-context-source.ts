@@ -1,7 +1,7 @@
 import {
-  parseAuthenticatedUser,
-  type AuthenticatedUser,
   type AuthContextSource,
+  type AuthenticatedUser,
+  parseAuthenticatedUser,
 } from '../../application/auth/auth-context';
 
 /**
