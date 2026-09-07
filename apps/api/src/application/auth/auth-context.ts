@@ -24,51 +24,42 @@ export type AuthContextSource = {
 
 /**
  * 外部/Fixture identityを検証してApplication contractへ変換する。
+ * 文字列trimなどHTTP request全体へ適用すべき正規化はPresentation境界で行う。
  *
  * @throws identityが安全な認証主体として扱えない場合。
  */
 export function parseAuthenticatedUser(value: unknown): AuthenticatedUser {
-  if (!isRecord(value)) {
-    throw new Error('Authenticated user must be an object.');
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    throw new Error('認証済みユーザーはオブジェクトである必要があります。');
   }
 
-  const internalUserId = parseRequiredIdentifier(value.internalUserId, 'internal user id');
-  const externalAuthId = parseRequiredIdentifier(value.externalAuthId, 'external auth id');
+  const user = value as Record<string, unknown>;
 
-  if (value.provider !== 'clerk') {
-    throw new Error('Authenticated user provider must be clerk.');
+  if (typeof user.internalUserId !== 'string' || user.internalUserId.trim().length === 0) {
+    throw new Error('認証済みユーザーの内部ユーザーIDは空でない文字列である必要があります。');
+  }
+
+  if (typeof user.externalAuthId !== 'string' || user.externalAuthId.trim().length === 0) {
+    throw new Error('認証済みユーザーの外部認証IDは空でない文字列である必要があります。');
+  }
+
+  if (user.provider !== 'clerk') {
+    throw new Error('認証プロバイダーはclerkである必要があります。');
+  }
+
+  if (user.displayName !== null && user.displayName !== undefined && typeof user.displayName !== 'string') {
+    throw new Error('表示名は文字列またはnullである必要があります。');
+  }
+
+  if (user.email !== null && user.email !== undefined && typeof user.email !== 'string') {
+    throw new Error('メールアドレスは文字列またはnullである必要があります。');
   }
 
   return {
-    internalUserId,
-    externalAuthId,
-    provider: value.provider,
-    displayName: parseOptionalText(value.displayName, 'display name'),
-    email: parseOptionalText(value.email, 'email'),
+    internalUserId: user.internalUserId,
+    externalAuthId: user.externalAuthId,
+    provider: user.provider,
+    displayName: user.displayName ?? null,
+    email: user.email ?? null,
   };
-}
-
-function parseRequiredIdentifier(value: unknown, label: string): string {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new Error(`Authenticated user ${label} must be a non-empty string.`);
-  }
-
-  return value.trim();
-}
-
-function parseOptionalText(value: unknown, label: string): string | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  if (typeof value !== 'string') {
-    throw new Error(`Authenticated user ${label} must be a string or null.`);
-  }
-
-  const normalized = value.trim();
-  return normalized.length > 0 ? normalized : null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
