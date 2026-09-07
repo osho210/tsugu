@@ -5,11 +5,11 @@ Human review feedback is not treated as a one-off patch request. When feedback d
 ## Workflow
 
 1. Read the concrete review comment and identify the underlying invariant.
-2. Check the invariant against architecture, security, database, and product rules.
+2. Check the invariant against architecture, security, database, product, migration, and other governing repository rules.
 3. Apply the smallest local fix to the commented PR.
-4. Search active implementation PRs for the same pattern and fix applicable occurrences without crossing unresolved dependencies.
+4. Search active implementation PRs for the same pattern. Treat each applicable PR as a separate lane: switch to that PR's own isolated worktree/task/branch and create a separate commit there. Never modify another PR from the current PR checkout. If an isolated lane is unavailable or the occurrence depends on an unresolved prerequisite, record the occurrence and leave that PR unchanged until it is safe to address.
 5. Add or update a repository rule when the invariant should affect future work.
-6. Keep exceptions explicit when a general rule conflicts with an architecture boundary.
+6. Keep exceptions explicit when a general rule conflicts with any governing repository constraint.
 7. If the feedback requires shared configuration, create a prerequisite issue/PR instead of duplicating that configuration across active feature branches.
 
 ## High-priority conventions
@@ -41,8 +41,9 @@ Human review feedback is not treated as a one-off patch request. When feedback d
 ### Validation and normalization
 
 - User-facing validation/error messages are written in Japanese.
-- Cross-cutting request normalization such as string trimming belongs at the Presentation/request boundary (for example an interceptor/pipe), not repeated field-by-field in use cases or domain parsing.
-- Domain/Application validation may still reject malformed or empty values; it should not silently own request-wide normalization.
+- Normalize strings only at a boundary that knows the field semantics. Use field-aware DTO transforms or an explicit allowlist in Presentation/request-boundary infrastructure for fields where trimming is part of the contract.
+- Never apply generic request-wide trimming to opaque or whitespace-significant values such as passwords, tokens, signatures, encoded data, or content whose whitespace can carry meaning.
+- Domain/Application validation may still reject malformed or empty values; it should not silently own transport-wide normalization.
 
 ### Helpers and guards
 
@@ -52,4 +53,4 @@ Human review feedback is not treated as a one-off patch request. When feedback d
 
 ## Review completion
 
-A Human review thread is complete only when the concrete issue is fixed or a documented architecture/product constraint explains why the exact requested mechanism is unsafe. In the latter case, preserve the intent with an architecture-compatible implementation and record the reason in the thread.
+A Human review thread is complete only when the concrete issue is fixed or a documented governing repository constraint explains why the exact requested mechanism is unsafe. Governing constraints include architecture, product, security, database, migration, privacy, permissions, and quality gates. In the latter case, preserve the reviewer's intent with the safest compatible implementation where possible and record the reason in the thread; never weaken or bypass a governing constraint merely to close a review thread.
