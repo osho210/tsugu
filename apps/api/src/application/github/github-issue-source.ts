@@ -63,6 +63,8 @@ export function validateGitHubIssueQuery(query: GitHubIssueQuery): void {
   const repositoryPart = /^[A-Za-z0-9_.-]+$/;
 
   if (
+    typeof query.owner !== 'string' ||
+    typeof query.repository !== 'string' ||
     !repositoryPart.test(query.owner) ||
     !repositoryPart.test(query.repository) ||
     isDotSegment(query.owner) ||
