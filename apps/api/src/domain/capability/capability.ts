@@ -27,21 +27,21 @@ type CapabilityImportance = 'required' | 'optional';
  * Capability判定の根拠となった入力Evidence。
  */
 type CapabilityEvidence = {
-  source: 'issue-title' | 'issue-body' | 'issue-label';
-  text: string;
+  readonly source: 'issue-title' | 'issue-body' | 'issue-label';
+  readonly text: string;
 };
 
 /**
  * Taskが要求するCapability。Domain × Role × Required Levelを保持する。
  */
 export type RequiredCapability = {
-  domain: string;
-  role: CapabilityRole;
-  requiredLevel: CapabilityLevel;
-  importance: CapabilityImportance;
-  confidence: number;
-  rationale: string;
-  evidence: readonly CapabilityEvidence[];
+  readonly domain: string;
+  readonly role: CapabilityRole;
+  readonly requiredLevel: CapabilityLevel;
+  readonly importance: CapabilityImportance;
+  readonly confidence: number;
+  readonly rationale: string;
+  readonly evidence: readonly CapabilityEvidence[];
 };
 
 /**
@@ -128,7 +128,8 @@ function normalizeDomain(value: string): string {
     .normalize('NFKC')
     .trim()
     .toLocaleLowerCase('en-US')
-    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/[^\p{L}\p{N}+#./_-]+/gu, '-')
+    .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 }
 
