@@ -18,8 +18,12 @@ export class FixtureGitHubIssueSource implements GitHubIssueSource {
   /**
    * repository識別子とIssue番号が一致するfixtureを返す。
    */
-  async getIssue(query: GitHubIssueQuery): Promise<GitHubIssue> {
-    validateGitHubIssueQuery(query);
+  getIssue(query: GitHubIssueQuery): Promise<GitHubIssue> {
+    try {
+      validateGitHubIssueQuery(query);
+    } catch (error) {
+      return Promise.reject(error instanceof Error ? error : new Error(String(error)));
+    }
 
     const issue = this.issues.find(
       (candidate) =>
@@ -29,9 +33,11 @@ export class FixtureGitHubIssueSource implements GitHubIssueSource {
     );
 
     if (!issue) {
-      throw new GitHubIssueSourceError('not-found', 'Fixture GitHub Issue was not found.');
+      return Promise.reject(
+        new GitHubIssueSourceError('not-found', 'Fixture GitHub Issue was not found.'),
+      );
     }
 
-    return issue;
+    return Promise.resolve(issue);
   }
 }
