@@ -101,6 +101,16 @@ export function parseRequiredCapability(value: unknown): RequiredCapability {
     throw new Error('Required CapabilityのEvidenceは配列である必要があります。');
   }
 
+  const parsedEvidence: CapabilityEvidence[] = [];
+
+  for (let index = 0; index < evidence.length; index += 1) {
+    if (!Object.hasOwn(evidence, index)) {
+      throw new Error('Required CapabilityのEvidenceに欠損要素を含めることはできません。');
+    }
+
+    parsedEvidence.push(parseCapabilityEvidence(evidence[index]));
+  }
+
   return {
     domain: normalizedDomain,
     role,
@@ -108,7 +118,7 @@ export function parseRequiredCapability(value: unknown): RequiredCapability {
     importance,
     confidence,
     rationale: rationale.trim(),
-    evidence: evidence.map(parseCapabilityEvidence),
+    evidence: parsedEvidence,
   };
 }
 
