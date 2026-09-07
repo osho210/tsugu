@@ -71,10 +71,14 @@ export function validateGitHubIssueQuery(query: GitHubIssueQuery): void {
     );
   }
 
-  if (typeof query.repository !== 'string' || !repositoryPattern.test(query.repository)) {
+  if (
+    typeof query.repository !== 'string' ||
+    query.repository.length > 100 ||
+    !repositoryPattern.test(query.repository)
+  ) {
     throw new GitHubIssueSourceError(
       'invalid-input',
-      'GitHub repository名が不正です。',
+      'GitHub repository名は1〜100文字の英数字、ピリオド、ハイフン、アンダースコアである必要があります。',
     );
   }
 
