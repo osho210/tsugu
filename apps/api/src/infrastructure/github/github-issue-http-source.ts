@@ -6,21 +6,15 @@ import {
   validateGitHubIssueQuery,
 } from '../../application/github/github-issue-source';
 
-/**
- * GitHub REST APIからIssueを取得するInfrastructure Adapter。
- */
+/** GitHub REST APIからIssueを取得するInfrastructure Adapter。 */
 export class GitHubIssueHttpSource implements GitHubIssueSource {
-  /**
-   * GitHub API設定を保持してAdapterを生成する。
-   */
+  /** GitHub API設定を保持してAdapterを生成する。 */
   constructor(
     private readonly token: string | undefined = process.env.GITHUB_TOKEN,
     private readonly timeoutMs = 5_000,
   ) {}
 
-  /**
-   * GitHub REST APIからIssueを取得してApplication contractへ正規化する。
-   */
+  /** GitHub REST APIからIssueを取得してApplication contractへ正規化する。 */
   async getIssue(query: GitHubIssueQuery): Promise<GitHubIssue> {
     validateGitHubIssueQuery(query);
 
@@ -46,43 +40,63 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
     } catch (error) {
       throw new GitHubIssueSourceError(
         'temporary-failure',
-        'GitHub Issue request failed or timed out.',
+        'GitHub Issueの取得に失敗したかタイムアウトしました。',
         { cause: error },
       );
     }
 
     if (response.status === 401) {
+      await disposeResponseBody(response);
       throw new GitHubIssueSourceError(
         'authentication-failure',
-        'GitHub API authentication failed.',
+        'GitHub APIの認証に失敗しました。',
       );
     }
 
     if (response.status === 404 || response.status === 410) {
-      throw new GitHubIssueSourceError('not-found', 'GitHub Issue was not found.');
+      await disposeResponseBody(response);
+      throw new GitHubIssueSourceError('not-found', 'GitHub Issueが見つかりませんでした。');
     }
 
-    if (response.status === 403 && (isHeaderRateLimitResponse(response) || (await isBodyRateLimitResponse(response)))) {
-      throw new GitHubIssueSourceError('rate-limit', 'GitHub API rate limit was exceeded.');
+    if (response.status === 403) {
+      const errorMessage = await readErrorMessage(response);
+
+      if (isHeaderRateLimitResponse(response) || isRateLimitMessage(errorMessage)) {
+        await disposeResponseBody(response);
+        throw new GitHubIssueSourceError('rate-limit', 'GitHub APIのrate limitを超過しました。');
+      }
+
+      if (isPermissionDeniedMessage(errorMessage)) {
+        await disposeResponseBody(response);
+        throw new GitHubIssueSourceError(
+          'authentication-failure',
+          'GitHub API tokenにIssue読み取り権限がありません。',
+        );
+      }
     }
 
     if (response.status >= 500 || response.status === 429) {
+      await disposeResponseBody(response);
       throw new GitHubIssueSourceError(
         response.status === 429 ? 'rate-limit' : 'temporary-failure',
-        'GitHub API is temporarily unavailable.',
+        response.status === 429
+          ? 'GitHub APIのrate limitを超過しました。'
+          : 'GitHub APIが一時的に利用できません。',
       );
     }
 
     if (!response.ok) {
+      await disposeResponseBody(response);
       throw new GitHubIssueSourceError(
         'temporary-failure',
-        `GitHub API returned HTTP ${response.status}.`,
+        `GitHub APIがHTTP ${response.status}を返しました。`,
       );
     }
 
     const payload = await readJsonBody(response);
+    const identity = resolveResponseIdentity(response, query);
 
-    return parseGitHubIssueResponse(query, payload);
+    return parseGitHubIssueResponse(identity, payload);
   }
 }
 
@@ -94,7 +108,7 @@ async function readJsonBody(response: Response): Promise<unknown> {
   } catch (error) {
     throw new GitHubIssueSourceError(
       'temporary-failure',
-      'GitHub Issue response body could not be read.',
+      'GitHub Issue response bodyを読み取れませんでした。',
       { cause: error },
     );
   }
@@ -104,9 +118,30 @@ async function readJsonBody(response: Response): Promise<unknown> {
   } catch (error) {
     throw new GitHubIssueSourceError(
       'invalid-response',
-      'GitHub Issue response body was not valid JSON.',
+      'GitHub Issue response bodyが有効なJSONではありません。',
       { cause: error },
     );
+  }
+}
+
+async function readErrorMessage(response: Response): Promise<string | null> {
+  try {
+    const payload = JSON.parse(await response.clone().text()) as unknown;
+    return isRecord(payload) && typeof payload.message === 'string' ? payload.message : null;
+  } catch {
+    return null;
+  }
+}
+
+async function disposeResponseBody(response: Response): Promise<void> {
+  if (response.body === null || response.bodyUsed) {
+    return;
+  }
+
+  try {
+    await response.body.cancel();
+  } catch {
+    // status errorを返すためのbest-effort cleanup。cleanup失敗でerror分類を変えない。
   }
 }
 
@@ -117,36 +152,62 @@ function isHeaderRateLimitResponse(response: Response): boolean {
   );
 }
 
-async function isBodyRateLimitResponse(response: Response): Promise<boolean> {
-  let body: string;
-
-  try {
-    body = await response.clone().text();
-  } catch {
+function isRateLimitMessage(message: string | null): boolean {
+  if (message === null) {
     return false;
   }
 
-  try {
-    const payload = JSON.parse(body) as unknown;
+  const normalized = message.toLocaleLowerCase('en-US');
+  return normalized.includes('secondary rate limit') || normalized.includes('abuse detection');
+}
 
-    if (!isRecord(payload) || typeof payload.message !== 'string') {
-      return false;
+function isPermissionDeniedMessage(message: string | null): boolean {
+  if (message === null) {
+    return false;
+  }
+
+  const normalized = message.toLocaleLowerCase('en-US');
+  return (
+    normalized.includes('resource not accessible by personal access token') ||
+    normalized.includes('resource not accessible by integration')
+  );
+}
+
+function resolveResponseIdentity(response: Response, query: GitHubIssueQuery): GitHubIssueQuery {
+  if (response.url.length === 0) {
+    return query;
+  }
+
+  try {
+    const url = new URL(response.url);
+    const match = /^\/repos\/([^/]+)\/([^/]+)\/issues\/(\d+)$/.exec(url.pathname);
+
+    if (
+      url.protocol !== 'https:' ||
+      url.hostname !== 'api.github.com' ||
+      match === null ||
+      Number(match[3]) !== query.issueNumber
+    ) {
+      return query;
     }
 
-    const message = payload.message.toLocaleLowerCase('en-US');
-    return message.includes('secondary rate limit') || message.includes('abuse detection');
+    return {
+      owner: decodeURIComponent(match[1]),
+      repository: decodeURIComponent(match[2]),
+      issueNumber: query.issueNumber,
+    };
   } catch {
-    return false;
+    return query;
   }
 }
 
 function parseGitHubIssueResponse(query: GitHubIssueQuery, value: unknown): GitHubIssue {
   if (!isRecord(value)) {
-    throw invalidResponse('GitHub Issue response must be an object.');
+    throw invalidResponse('GitHub Issue responseはオブジェクトである必要があります。');
   }
 
   if ('pull_request' in value) {
-    throw invalidResponse('GitHub Issue response identified a pull request instead of an issue.');
+    throw invalidResponse('GitHub Issue responseがPull Requestを示しています。');
   }
 
   const number = value.number;
@@ -156,15 +217,15 @@ function parseGitHubIssueResponse(query: GitHubIssueQuery, value: unknown): GitH
   const labels = value.labels;
 
   if (number !== query.issueNumber || typeof title !== 'string') {
-    throw invalidResponse('GitHub Issue response has invalid number or title.');
+    throw invalidResponse('GitHub Issue responseのnumberまたはtitleが不正です。');
   }
 
   if (body !== null && typeof body !== 'string') {
-    throw invalidResponse('GitHub Issue response body is invalid.');
+    throw invalidResponse('GitHub Issue responseのbodyが不正です。');
   }
 
   if (!isGitHubIssueHtmlUrl(htmlUrl, query) || !Array.isArray(labels)) {
-    throw invalidResponse('GitHub Issue response URL or labels are invalid.');
+    throw invalidResponse('GitHub Issue responseのURLまたはlabelsが不正です。');
   }
 
   return {
@@ -207,7 +268,7 @@ function parseLabel(value: unknown): string {
     return value.name;
   }
 
-  throw invalidResponse('GitHub Issue response contains an invalid label.');
+  throw invalidResponse('GitHub Issue responseに不正なlabelが含まれています。');
 }
 
 function invalidResponse(message: string): GitHubIssueSourceError {
