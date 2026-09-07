@@ -17,17 +17,30 @@ describe('FixtureCapabilityExtractor', () => {
       ],
     },
   ];
+  const input = {
+    title: 'DB schemaを変更する',
+    body: null,
+    labels: [],
+  };
 
   it('credentialなしで検証済みCapabilityを返す', async () => {
     const extractor = new FixtureCapabilityExtractor(fixture);
 
-    await expect(
-      extractor.extract({
-        title: 'DB schemaを変更する',
-        body: null,
-        labels: [],
-      }),
-    ).resolves.toEqual([
+    await expect(extractor.extract(input)).resolves.toEqual([
+      {
+        ...fixture[0],
+        domain: 'database',
+      },
+    ]);
+  });
+
+  it('呼出ごとに独立したfixture snapshotを返す', async () => {
+    const extractor = new FixtureCapabilityExtractor(fixture);
+    const first = await extractor.extract(input);
+
+    Object.assign(first[0] ?? {}, { domain: 'mutated' });
+
+    await expect(extractor.extract(input)).resolves.toEqual([
       {
         ...fixture[0],
         domain: 'database',
