@@ -137,6 +137,15 @@ describe('RequiredCapability', () => {
       },
     );
 
+    it.each(['ok\u0000', 'approved\u202Etxt'])(
+      'Rationaleにcontrol文字が混在する場合、日本語のvalidation errorになること',
+      (rationale) => {
+        expect(() => parseRequiredCapability(createRequiredCapability({ rationale }))).toThrow(
+          'Required CapabilityのRationaleには表示可能な文字が必要です。',
+        );
+      },
+    );
+
     it('Evidenceが空配列の場合、日本語のvalidation errorになること', () => {
       expect(() =>
         parseRequiredCapability(createRequiredCapability({ evidence: [] })),
@@ -145,6 +154,19 @@ describe('RequiredCapability', () => {
 
     it.each(['\u0000', '\u0085', '\uFFF9'])(
       'Evidence Textがcontrol-onlyの%sの場合、日本語のvalidation errorになること',
+      (text) => {
+        expect(() =>
+          parseRequiredCapability(
+            createRequiredCapability({
+              evidence: [{ source: 'issue-body', text }],
+            }),
+          ),
+        ).toThrow('Capability EvidenceのTextには表示可能な文字が必要です。');
+      },
+    );
+
+    it.each(['ok\u0000', 'approved\u202Etxt'])(
+      'Evidence Textにcontrol文字が混在する場合、日本語のvalidation errorになること',
       (text) => {
         expect(() =>
           parseRequiredCapability(
