@@ -6,14 +6,22 @@ const distRoot = resolve(import.meta.dirname, 'dist');
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
-    if (!specifier.startsWith('@/')) {
-      return nextResolve(specifier, context);
+    if (specifier.startsWith('@/')) {
+      const relativePath = specifier.slice(2);
+      const emittedPath = extname(relativePath) === '' ? `${relativePath}.js` : relativePath;
+      const resolvedUrl = pathToFileURL(resolve(distRoot, emittedPath)).href;
+
+      return nextResolve(resolvedUrl, context);
     }
 
-    const relativePath = specifier.slice(2);
-    const emittedPath = extname(relativePath) === '' ? `${relativePath}.js` : relativePath;
-    const resolvedUrl = pathToFileURL(resolve(distRoot, emittedPath)).href;
+    if (
+      context.parentURL?.startsWith(pathToFileURL(distRoot).href) &&
+      (specifier.startsWith('./') || specifier.startsWith('../')) &&
+      extname(specifier) === ''
+    ) {
+      return nextResolve(new URL(`${specifier}.js`, context.parentURL).href, context);
+    }
 
-    return nextResolve(resolvedUrl, context);
+    return nextResolve(specifier, context);
   },
 });
