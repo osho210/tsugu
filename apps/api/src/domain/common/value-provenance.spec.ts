@@ -5,45 +5,100 @@ import {
 } from './value-provenance';
 
 describe('ValueProvenance', () => {
-  it('overrideがない場合はsource valueを返す', () => {
-    const value: ProvenancedValue<number> = { source: { kind: 'ai-calculated', value: 3 }, override: null };
-    expect(resolveEffectiveValue(value)).toEqual({ value: 3, kind: 'ai-calculated' });
+  describe('effective value', () => {
+    it('Human overrideがない場合、source valueとsource kindであること', () => {
+      const value: ProvenancedValue<number> = {
+        source: { kind: 'ai-calculated', value: 3 },
+        override: null,
+      };
+
+      expect(resolveEffectiveValue(value)).toEqual({
+        value: 3,
+        kind: 'ai-calculated',
+      });
+    });
+
+    it('Human overrideがある場合、sourceを保持しつつoverride valueとhuman-override kindであること', () => {
+      const override = createHumanOverride({
+        value: 4,
+        actorId: 'user-1',
+        correctedAt: '2026-09-07T00:00:00.000Z',
+        reason: '実際の担当範囲を確認したため',
+      });
+      const value: ProvenancedValue<number> = {
+        source: { kind: 'ai-calculated', value: 3 },
+        override,
+      };
+
+      expect(value).toEqual({
+        source: {
+          kind: 'ai-calculated',
+          value: 3,
+        },
+        override: {
+          kind: 'human-override',
+          value: 4,
+          actorId: 'user-1',
+          correctedAt: '2026-09-07T00:00:00.000Z',
+          reason: '実際の担当範囲を確認したため',
+        },
+      });
+      expect(resolveEffectiveValue(value)).toEqual({
+        value: 4,
+        kind: 'human-override',
+      });
+    });
   });
 
-  it('Human override後もsourceを保持したままeffective valueを切り替える', () => {
-    const override = createHumanOverride({ value: 4, actorId: 'user-1', correctedAt: '2026-09-07T00:00:00.000Z', reason: '実際の担当範囲を確認したため' });
-    const value: ProvenancedValue<number> = { source: { kind: 'ai-calculated', value: 3 }, override };
-    expect(value.source.value).toBe(3);
-    expect(resolveEffectiveValue(value)).toEqual({ value: 4, kind: 'human-override' });
+  describe('correctedAt', () => {
+    it.each([
+      ['2026-09-07T09:00:00+09:00', '2026-09-07T00:00:00.000Z'],
+      ['2026-09-07T00:00:00Z', '2026-09-07T00:00:00.000Z'],
+      ['2028-02-29T00:00:00Z', '2028-02-29T00:00:00.000Z'],
+      ['2026-09-07T24:00:00Z', '2026-09-08T00:00:00.000Z'],
+      ['2026-09-07T00:00:00+14:00', '2026-09-06T10:00:00.000Z'],
+    ])('%sの場合、UTC canonical timestampが%sであること', (input, expected) => {
+      expect(
+        createHumanOverride({
+          value: 4,
+          actorId: 'user-1',
+          correctedAt: input,
+          reason: '確認済み',
+        }).correctedAt,
+      ).toBe(expected);
+    });
+
+    it.each([
+      '2026-09-07',
+      '2026-02-29T00:00:00Z',
+      '2026-04-31T00:00:00Z',
+      '2026-09-07T24:00:01Z',
+      '2026-09-07T24:00:00.001Z',
+      '2026-09-07T00:00:00+14:01',
+      '2026-09-07T00:00:00+23:59',
+      '2026-09-07T00:00:00-00:00',
+    ])('%sの場合、日本語のtimestamp validation errorになること', (correctedAt) => {
+      expect(() =>
+        createHumanOverride({
+          value: 4,
+          actorId: 'user-1',
+          correctedAt,
+          reason: '確認済み',
+        }),
+      ).toThrow('Human overrideのcorrectedAtは有効なISO timestampである必要があります。');
+    });
   });
 
-  it.each([
-    ['2026-09-07T09:00:00+09:00', '2026-09-07T00:00:00.000Z'],
-    ['2026-09-07T00:00:00Z', '2026-09-07T00:00:00.000Z'],
-    ['2028-02-29T00:00:00Z', '2028-02-29T00:00:00.000Z'],
-    ['2026-09-07T24:00:00Z', '2026-09-08T00:00:00.000Z'],
-    ['2026-09-07T00:00:00+14:00', '2026-09-06T10:00:00.000Z'],
-  ])('有効なISO timestamp %s をUTCへ正規化する', (input, expected) => {
-    expect(createHumanOverride({ value: 4, actorId: 'user-1', correctedAt: input, reason: '確認済み' }).correctedAt).toBe(expected);
-  });
-
-  it.each([
-    '2026-09-07',
-    '2026-02-29T00:00:00Z',
-    '2026-04-31T00:00:00Z',
-    '2026-09-07T24:00:01Z',
-    '2026-09-07T24:00:00.001Z',
-    '2026-09-07T00:00:00+14:01',
-    '2026-09-07T00:00:00+23:59',
-  ])('不正なISO timestamp %s を拒否する', (correctedAt) => {
-    expect(() => createHumanOverride({ value: 4, actorId: 'user-1', correctedAt, reason: '確認済み' })).toThrow(
-      'Human override correctedAt must be a valid ISO timestamp.',
-    );
-  });
-
-  it('空のoverride reasonを拒否する', () => {
-    expect(() => createHumanOverride({ value: 4, actorId: 'user-1', correctedAt: '2026-09-07T00:00:00.000Z', reason: '   ' })).toThrow(
-      'Human override reason must not be empty.',
-    );
+  describe('audit metadata', () => {
+    it('reasonが空の場合、日本語のvalidation errorになること', () => {
+      expect(() =>
+        createHumanOverride({
+          value: 4,
+          actorId: 'user-1',
+          correctedAt: '2026-09-07T00:00:00.000Z',
+          reason: '   ',
+        }),
+      ).toThrow('Human overrideのreasonは空でない必要があります。');
+    });
   });
 });
