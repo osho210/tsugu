@@ -90,11 +90,11 @@ export function calculateLoadFitness(workload: WorkloadResult): number {
     return 0;
   }
 
-  const percentage = normalizePercentage(workload.percentage);
-
-  if (!Number.isFinite(percentage) || percentage < 0) {
+  if (!Number.isFinite(workload.percentage) || workload.percentage < 0) {
     throw new Error('Workload percentage must be a finite non-negative number.');
   }
+
+  const percentage = normalizePercentage(workload.percentage);
 
   if (percentage <= 50) {
     return 100;
