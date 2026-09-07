@@ -77,7 +77,8 @@ describe('ValueProvenance', () => {
       '2026-09-07T00:00:00+14:01',
       '2026-09-07T00:00:00+23:59',
       '2026-09-07T00:00:00-00:00',
-    ])('%sの場合、日本語のtimestamp validation errorになること', (correctedAt) => {
+      '2016-12-31T23:59:60Z',
+    ])('%sの場合、サポート対象外timestampとして日本語のvalidation errorになること', (correctedAt) => {
       expect(() =>
         createHumanOverride({
           value: 4,
@@ -85,7 +86,9 @@ describe('ValueProvenance', () => {
           correctedAt,
           reason: '確認済み',
         }),
-      ).toThrow('Human overrideのcorrectedAtは有効なISO timestampである必要があります。');
+      ).toThrow(
+        'Human overrideのcorrectedAtはサポート対象のISO timestampである必要があります。',
+      );
     });
   });
 
