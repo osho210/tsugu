@@ -108,6 +108,16 @@ describe('RequiredCapability', () => {
       },
     );
 
+    it('Evidence配列に欠損要素がある場合、日本語のvalidation errorになること', () => {
+      expect(() =>
+        parseRequiredCapability(
+          createRequiredCapability({
+            evidence: new Array(1),
+          }),
+        ),
+      ).toThrow('Required CapabilityのEvidenceに欠損要素を含めることはできません。');
+    });
+
     it('Provider出力が配列以外の場合、日本語のvalidation errorになること', () => {
       expect(() => parseRequiredCapabilities(createRequiredCapability())).toThrow(
         'Required CapabilityのProvider出力は配列である必要があります。',
