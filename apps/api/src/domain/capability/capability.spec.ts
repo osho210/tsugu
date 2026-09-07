@@ -49,14 +49,41 @@ describe('RequiredCapability', () => {
     ).toBe(expected);
   });
 
-  it('正規化後に空になるDomainを拒否する', () => {
-    expect(() =>
+  it('retained punctuation周辺の空白をcanonicalizeする', () => {
+    expect(
       parseRequiredCapability({
         ...validCapability,
-        domain: '!!!',
-      }),
-    ).toThrow('Required Capability domain must contain letters or numbers.');
+        domain: ' CI / CD ',
+      }).domain,
+    ).toBe('ci/cd');
   });
+
+  it('Unicode combining markを保持する', () => {
+    const first = parseRequiredCapability({
+      ...validCapability,
+      domain: 'का',
+    }).domain;
+    const second = parseRequiredCapability({
+      ...validCapability,
+      domain: 'कि',
+    }).domain;
+
+    expect(first).toBe('का');
+    expect(second).toBe('कि');
+    expect(first).not.toBe(second);
+  });
+
+  it.each(['!!!', '+++', '###', '.', '/', '_'])(
+    'letters/numbersを含まないDomain %s を拒否する',
+    (domain) => {
+      expect(() =>
+        parseRequiredCapability({
+          ...validCapability,
+          domain,
+        }),
+      ).toThrow('Required Capability domain must contain letters or numbers.');
+    },
+  );
 
   it.each([0, 6])('Required Level %s を拒否する', (requiredLevel) => {
     expect(() =>
