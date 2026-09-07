@@ -17,6 +17,7 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
   /** GitHub REST APIからIssueを取得してApplication contractへ正規化する。 */
   async getIssue(query: GitHubIssueQuery): Promise<GitHubIssue> {
     validateGitHubIssueQuery(query);
+    validateGitHubToken(this.token);
 
     const headers: Record<string, string> = {
       Accept: 'application/vnd.github+json',
@@ -98,6 +99,19 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
   }
 }
 
+function validateGitHubToken(token: string | undefined): void {
+  if (token === undefined || token.length === 0) {
+    return;
+  }
+
+  if (/\p{Cc}/u.test(token)) {
+    throw new GitHubIssueSourceError(
+      'authentication-failure',
+      'GitHub API tokenの形式が不正です。',
+    );
+  }
+}
+
 async function readJsonBody(response: Response): Promise<unknown> {
   let body: string;
 
@@ -123,8 +137,20 @@ async function readJsonBody(response: Response): Promise<unknown> {
 }
 
 async function readErrorMessage(response: Response): Promise<string | null> {
+  let body: string;
+
   try {
-    const payload = JSON.parse(await response.clone().text()) as unknown;
+    body = await response.clone().text();
+  } catch (error) {
+    throw new GitHubIssueSourceError(
+      'temporary-failure',
+      'GitHub API error response bodyを読み取れませんでした。',
+      { cause: error },
+    );
+  }
+
+  try {
+    const payload = JSON.parse(body) as unknown;
     return isRecord(payload) && typeof payload.message === 'string' ? payload.message : null;
   } catch {
     return null;
