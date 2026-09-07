@@ -26,6 +26,20 @@ describe('RequiredCapability', () => {
     });
   });
 
+  it('Unicode casing variantを同じcanonical keyへ正規化する', () => {
+    const first = parseRequiredCapability({
+      ...validCapability,
+      domain: 'Straße',
+    }).domain;
+    const second = parseRequiredCapability({
+      ...validCapability,
+      domain: 'STRASSE',
+    }).domain;
+
+    expect(first).toBe('strasse');
+    expect(second).toBe('strasse');
+  });
+
   it('日本語Domainを保持して正規化する', () => {
     expect(
       parseRequiredCapability({
