@@ -66,13 +66,11 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
         throw new GitHubIssueSourceError('rate-limit', 'GitHub APIのrate limitを超過しました。');
       }
 
-      if (isAuthenticationDeniedResponse(response, errorMessage)) {
-        await disposeResponseBody(response);
-        throw new GitHubIssueSourceError(
-          'authentication-failure',
-          'GitHub API tokenにIssue読み取り権限がありません。',
-        );
-      }
+      await disposeResponseBody(response);
+      throw new GitHubIssueSourceError(
+        'authentication-failure',
+        'GitHub API tokenにIssue読み取り権限がありません。',
+      );
     }
 
     if (response.status >= 500 || response.status === 429) {
@@ -159,23 +157,6 @@ function isRateLimitMessage(message: string | null): boolean {
 
   const normalized = message.toLocaleLowerCase('en-US');
   return normalized.includes('secondary rate limit') || normalized.includes('abuse detection');
-}
-
-function isAuthenticationDeniedResponse(response: Response, message: string | null): boolean {
-  if (response.headers.get('x-github-sso')?.toLocaleLowerCase('en-US').includes('required')) {
-    return true;
-  }
-
-  if (message === null) {
-    return false;
-  }
-
-  const normalized = message.toLocaleLowerCase('en-US');
-  return (
-    normalized.includes('resource not accessible by personal access token') ||
-    normalized.includes('resource not accessible by integration') ||
-    normalized.includes('resource protected by organization saml enforcement')
-  );
 }
 
 function resolveResponseIdentity(
