@@ -39,6 +39,17 @@ describe('RequiredCapability', () => {
       expect(reparsed).toBe('ss');
     });
 
+    it('case foldingで結合文字順序が変わる場合、canonical keyが一致すること', () => {
+      const uppercase = parseRequiredCapability(
+        createRequiredCapability({ domain: 'İ\u0327' }),
+      ).domain;
+      const lowercase = parseRequiredCapability(
+        createRequiredCapability({ domain: 'i\u0327\u0307' }),
+      ).domain;
+
+      expect(uppercase).toBe(lowercase);
+    });
+
     it('Turkish dotless iを含む場合、dotted iへ崩さず保持すること', () => {
       const dotless = parseRequiredCapability(createRequiredCapability({ domain: 'sık' })).domain;
       const dotted = parseRequiredCapability(createRequiredCapability({ domain: 'sik' })).domain;
@@ -125,6 +136,12 @@ describe('RequiredCapability', () => {
         );
       },
     );
+
+    it('Evidenceが空配列の場合、日本語のvalidation errorになること', () => {
+      expect(() =>
+        parseRequiredCapability(createRequiredCapability({ evidence: [] })),
+      ).toThrow('Required CapabilityのEvidenceは1件以上必要です。');
+    });
 
     it.each(['\u0000', '\u0085', '\uFFF9'])(
       'Evidence Textがcontrol-onlyの%sの場合、日本語のvalidation errorになること',
