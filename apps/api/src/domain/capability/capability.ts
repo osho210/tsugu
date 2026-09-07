@@ -51,7 +51,7 @@ export type RequiredCapability = {
  */
 export function parseRequiredCapability(value: unknown): RequiredCapability {
   if (!isRecord(value)) {
-    throw new Error('Required Capability must be an object.');
+    throw new Error('Required Capabilityはオブジェクトである必要があります。');
   }
 
   const domain = value.domain;
@@ -63,25 +63,25 @@ export function parseRequiredCapability(value: unknown): RequiredCapability {
   const evidence = value.evidence;
 
   if (typeof domain !== 'string' || domain.trim().length === 0) {
-    throw new Error('Required Capability domain must be a non-empty string.');
+    throw new Error('Required CapabilityのDomainは空でない文字列である必要があります。');
   }
 
   const normalizedDomain = normalizeDomain(domain);
 
   if (!/[\p{L}\p{N}]/u.test(normalizedDomain)) {
-    throw new Error('Required Capability domain must contain letters or numbers.');
+    throw new Error('Required CapabilityのDomainには文字または数字が必要です。');
   }
 
   if (!isCapabilityRole(role)) {
-    throw new Error('Required Capability role is invalid.');
+    throw new Error('Required CapabilityのRoleが不正です。');
   }
 
   if (!isCapabilityLevel(requiredLevel)) {
-    throw new Error('Required Capability level must be between 1 and 5.');
+    throw new Error('Required CapabilityのLevelは1から5である必要があります。');
   }
 
   if (importance !== 'required' && importance !== 'optional') {
-    throw new Error('Required Capability importance is invalid.');
+    throw new Error('Required CapabilityのImportanceが不正です。');
   }
 
   if (
@@ -90,15 +90,15 @@ export function parseRequiredCapability(value: unknown): RequiredCapability {
     confidence < 0 ||
     confidence > 1
   ) {
-    throw new Error('Required Capability confidence must be between 0 and 1.');
+    throw new Error('Required CapabilityのConfidenceは0から1である必要があります。');
   }
 
   if (typeof rationale !== 'string' || rationale.trim().length === 0) {
-    throw new Error('Required Capability rationale must be a non-empty string.');
+    throw new Error('Required CapabilityのRationaleは空でない文字列である必要があります。');
   }
 
   if (!Array.isArray(evidence)) {
-    throw new Error('Required Capability evidence must be an array.');
+    throw new Error('Required CapabilityのEvidenceは配列である必要があります。');
   }
 
   return {
@@ -117,7 +117,7 @@ export function parseRequiredCapability(value: unknown): RequiredCapability {
  */
 export function parseRequiredCapabilities(value: unknown): readonly RequiredCapability[] {
   if (!Array.isArray(value)) {
-    throw new Error('Required Capability output must be an array.');
+    throw new Error('Required CapabilityのProvider出力は配列である必要があります。');
   }
 
   return value.map(parseRequiredCapability);
@@ -138,18 +138,18 @@ function normalizeDomain(value: string): string {
 
 function parseCapabilityEvidence(value: unknown): CapabilityEvidence {
   if (!isRecord(value)) {
-    throw new Error('Capability evidence must be an object.');
+    throw new Error('Capability Evidenceはオブジェクトである必要があります。');
   }
 
   const source = value.source;
   const text = value.text;
 
   if (source !== 'issue-title' && source !== 'issue-body' && source !== 'issue-label') {
-    throw new Error('Capability evidence source is invalid.');
+    throw new Error('Capability EvidenceのSourceが不正です。');
   }
 
   if (typeof text !== 'string' || text.trim().length === 0) {
-    throw new Error('Capability evidence text must be a non-empty string.');
+    throw new Error('Capability EvidenceのTextは空でない文字列である必要があります。');
   }
 
   return { source, text: text.trim() };
