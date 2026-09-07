@@ -25,10 +25,12 @@ export class FixtureGitHubIssueSource implements GitHubIssueSource {
       return Promise.reject(error instanceof Error ? error : new Error(String(error)));
     }
 
+    const owner = query.owner.toLocaleLowerCase('en-US');
+    const repository = query.repository.toLocaleLowerCase('en-US');
     const issue = this.issues.find(
       (candidate) =>
-        candidate.owner === query.owner &&
-        candidate.repository === query.repository &&
+        candidate.owner.toLocaleLowerCase('en-US') === owner &&
+        candidate.repository.toLocaleLowerCase('en-US') === repository &&
         candidate.issueNumber === query.issueNumber,
     );
 
