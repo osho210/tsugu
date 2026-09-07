@@ -6,8 +6,8 @@ Human review feedback is not treated as a one-off patch request. When feedback d
 
 1. Read the concrete review comment and identify the underlying invariant.
 2. Check the invariant against architecture, security, database, product, migration, and other governing repository rules, and verify that the concrete issue is still applicable to the current head.
-3. If the investigation confirms an applicable issue, apply the smallest local fix to the commented PR. If the feedback is already satisfied, stale, or factually inapplicable, do not make an unnecessary code change; record the evidence and proceed to the completion rule.
-4. Search active implementation PRs for the same pattern. Treat each applicable PR as a separate lane: switch to that PR's own isolated worktree/task/branch and create a separate commit there. Never modify another PR from the current PR checkout. If an isolated lane is unavailable or the occurrence depends on an unresolved prerequisite, record the occurrence and leave that PR unchanged until it is safe to address.
+3. If the investigation confirms an applicable issue, apply the smallest local fix to the commented PR. If the feedback is already satisfied, stale, or factually inapplicable, do not make an unnecessary local code change; record the evidence, then continue the remaining workflow for any still-valid reusable invariant.
+4. Search active implementation PRs for the same pattern when the underlying invariant remains valid. Treat each applicable PR as a separate lane: switch to that PR's own isolated worktree/task/branch and create a separate commit there. Never modify another PR from the current PR checkout. If an isolated lane is unavailable or the occurrence depends on an unresolved prerequisite, record the occurrence and leave that PR unchanged until it is safe to address.
 5. Add or update a repository rule when the invariant should affect future work.
 6. Keep exceptions explicit when a general rule conflicts with any governing repository constraint.
 7. If the feedback requires shared configuration, create a prerequisite issue/PR instead of duplicating that configuration across active feature branches.
