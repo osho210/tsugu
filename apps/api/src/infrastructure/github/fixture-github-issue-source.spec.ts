@@ -23,6 +23,18 @@ describe('FixtureGitHubIssueSource', () => {
     ).resolves.toEqual(issue);
   });
 
+  it('GitHub repository識別子をcase-insensitiveに照合する', async () => {
+    const source = new FixtureGitHubIssueSource([issue]);
+
+    await expect(
+      source.getIssue({
+        owner: 'Osho210',
+        repository: 'Tsugu',
+        issueNumber: 40,
+      }),
+    ).resolves.toEqual(issue);
+  });
+
   it('存在しないIssueをnot-foundとして返す', async () => {
     const source = new FixtureGitHubIssueSource([issue]);
 
