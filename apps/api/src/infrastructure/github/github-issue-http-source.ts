@@ -51,11 +51,11 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
       );
     }
 
-    if (response.status === 404) {
+    if (response.status === 404 || response.status === 410) {
       throw new GitHubIssueSourceError('not-found', 'GitHub Issue was not found.');
     }
 
-    if (response.status === 403 && isRateLimitResponse(response)) {
+    if (response.status === 403 && (isHeaderRateLimitResponse(response) || (await isBodyRateLimitResponse(response)))) {
       throw new GitHubIssueSourceError('rate-limit', 'GitHub API rate limit was exceeded.');
     }
 
@@ -103,11 +103,34 @@ async function readJsonBody(response: Response): Promise<unknown> {
   }
 }
 
-function isRateLimitResponse(response: Response): boolean {
+function isHeaderRateLimitResponse(response: Response): boolean {
   return (
     response.headers.get('x-ratelimit-remaining') === '0' ||
     response.headers.has('retry-after')
   );
+}
+
+async function isBodyRateLimitResponse(response: Response): Promise<boolean> {
+  let body: string;
+
+  try {
+    body = await response.clone().text();
+  } catch {
+    return false;
+  }
+
+  try {
+    const payload = JSON.parse(body) as unknown;
+
+    if (!isRecord(payload) || typeof payload.message !== 'string') {
+      return false;
+    }
+
+    const message = payload.message.toLocaleLowerCase('en-US');
+    return message.includes('secondary rate limit') || message.includes('abuse detection');
+  } catch {
+    return false;
+  }
 }
 
 function parseGitHubIssueResponse(query: GitHubIssueQuery, value: unknown): GitHubIssue {
@@ -129,7 +152,7 @@ function parseGitHubIssueResponse(query: GitHubIssueQuery, value: unknown): GitH
     throw invalidResponse('GitHub Issue response body is invalid.');
   }
 
-  if (typeof htmlUrl !== 'string' || !Array.isArray(labels)) {
+  if (!isGitHubHtmlUrl(htmlUrl) || !Array.isArray(labels)) {
     throw invalidResponse('GitHub Issue response URL or labels are invalid.');
   }
 
@@ -142,6 +165,19 @@ function parseGitHubIssueResponse(query: GitHubIssueQuery, value: unknown): GitH
     labels: labels.map(parseLabel),
     htmlUrl,
   };
+}
+
+function isGitHubHtmlUrl(value: unknown): value is string {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && url.hostname === 'github.com';
+  } catch {
+    return false;
+  }
 }
 
 function parseLabel(value: unknown): string {
