@@ -1,9 +1,9 @@
-import { spawnSync } from 'node:child_process';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const aliasHookPath = fileURLToPath(new URL('./register-alias.mjs', import.meta.url));
+const aliasHookUrl = new URL('./register-alias.mjs', import.meta.url).href;
 const existingNodeOptions = process.env.NODE_OPTIONS?.trim();
-const preloadOption = `--import=${aliasHookPath}`;
+const preloadOption = `--import=${aliasHookUrl}`;
 const nodeOptions = existingNodeOptions
   ? `${existingNodeOptions} ${preloadOption}`
   : preloadOption;
@@ -11,7 +11,7 @@ const nodeOptions = existingNodeOptions
 const nestCliPath = fileURLToPath(
   new URL('./node_modules/@nestjs/cli/bin/nest.js', import.meta.url),
 );
-const result = spawnSync(process.execPath, [nestCliPath, ...process.argv.slice(2)], {
+const child = spawn(process.execPath, [nestCliPath, ...process.argv.slice(2)], {
   env: {
     ...process.env,
     NODE_OPTIONS: nodeOptions,
@@ -19,8 +19,32 @@ const result = spawnSync(process.execPath, [nestCliPath, ...process.argv.slice(2
   stdio: 'inherit',
 });
 
-if (result.error) {
-  throw result.error;
+const forwardedSignals = ['SIGINT', 'SIGTERM'];
+const signalHandlers = new Map();
+
+for (const signal of forwardedSignals) {
+  const handler = () => {
+    if (!child.killed) {
+      child.kill(signal);
+    }
+  };
+  signalHandlers.set(signal, handler);
+  process.on(signal, handler);
 }
 
-process.exitCode = result.status ?? 1;
+const result = await new Promise((resolve, reject) => {
+  child.once('error', reject);
+  child.once('exit', (code, signal) => resolve({ code, signal }));
+});
+
+for (const [signal, handler] of signalHandlers) {
+  process.off(signal, handler);
+}
+
+if (result.signal === 'SIGINT') {
+  process.exitCode = 130;
+} else if (result.signal === 'SIGTERM') {
+  process.exitCode = 143;
+} else {
+  process.exitCode = result.code ?? 1;
+}
