@@ -34,14 +34,19 @@ describe('GitHubIssueHttpSource', () => {
       });
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
-      expect(fetchSpy.mock.lastCall?.[0]).toBe(
+      expect(String(fetchSpy.mock.lastCall?.[0])).toBe(
         'https://api.github.com/repos/osho210/tsugu/issues/40',
       );
-      expect(fetchSpy.mock.lastCall?.[1]?.headers).toEqual({
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-        Authorization: 'Bearer test-token',
-      });
+      expect(fetchSpy.mock.lastCall?.[1]).toEqual(
+        expect.objectContaining({
+          headers: {
+            Accept: 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28',
+            Authorization: 'Bearer test-token',
+          },
+          redirect: 'manual',
+        }),
+      );
     });
 
     it('repository rename後にAPIがcanonical URLへredirectした場合、canonical identityを返すこと', async () => {
@@ -99,6 +104,48 @@ describe('GitHubIssueHttpSource', () => {
         labels: [],
         htmlUrl: 'https://github.com/new-owner/new-repository/issues/40',
       });
+    });
+
+    it('GitHub API内のredirectを検証してからfollowすること', async () => {
+      const redirectResponse = new Response(null, {
+        status: 301,
+        headers: {
+          location: 'https://api.github.com/repos/new-owner/new-repository/issues/40',
+        },
+      });
+      const finalResponse = new Response(
+        JSON.stringify({
+          number: 40,
+          title: 'Renamed repository issue',
+          body: null,
+          html_url: 'https://github.com/new-owner/new-repository/issues/40',
+          labels: [],
+        }),
+        { status: 200 },
+      );
+      Object.defineProperty(finalResponse, 'url', {
+        value: 'https://api.github.com/repos/new-owner/new-repository/issues/40',
+      });
+      const fetchSpy = jest
+        .spyOn(globalThis, 'fetch')
+        .mockResolvedValueOnce(redirectResponse)
+        .mockResolvedValueOnce(finalResponse);
+      const source = new GitHubIssueHttpSource();
+
+      await expect(source.getIssue(createGitHubIssueQuery())).resolves.toEqual({
+        owner: 'new-owner',
+        repository: 'new-repository',
+        issueNumber: 40,
+        title: 'Renamed repository issue',
+        body: null,
+        labels: [],
+        htmlUrl: 'https://github.com/new-owner/new-repository/issues/40',
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(String(fetchSpy.mock.calls[1]?.[0])).toBe(
+        'https://api.github.com/repos/new-owner/new-repository/issues/40',
+      );
     });
   });
 
@@ -181,6 +228,17 @@ describe('GitHubIssueHttpSource', () => {
       expect(error.message).toBe('GitHub API tokenにIssue読み取り権限がありません。');
     });
 
+    it.each([400, 451])('未定義のHTTP %sの場合、非retryableなinvalid-responseであること', async (status) => {
+      jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status }));
+      const source = new GitHubIssueHttpSource();
+
+      const error = await captureSourceError(source.getIssue(createGitHubIssueQuery()));
+
+      expect(error.name).toBe('GitHubIssueSourceError');
+      expect(error.kind).toBe('invalid-response');
+      expect(error.message).toBe(`GitHub APIが非retryableなHTTP ${status}を返しました。`);
+    });
+
     it('HTTP 404でbodyがある場合、body streamを破棄してnot-foundを返すこと', async () => {
       const cancel = jest.fn().mockResolvedValue(undefined);
       const body = new ReadableStream({
@@ -207,6 +265,24 @@ describe('GitHubIssueHttpSource', () => {
       expect(error.name).toBe('GitHubIssueSourceError');
       expect(error.kind).toBe('temporary-failure');
       expect(error.message).toBe('GitHub Issueの取得に失敗したかタイムアウトしました。');
+    });
+
+    it('GitHub API外へのredirectはfollowせずinvalid-responseにすること', async () => {
+      const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue(
+        new Response(null, {
+          status: 302,
+          headers: { location: 'http://127.0.0.1/internal' },
+        }),
+      );
+      const source = new GitHubIssueHttpSource();
+
+      const error = await captureSourceError(source.getIssue(createGitHubIssueQuery()));
+
+      expect(error.name).toBe('GitHubIssueSourceError');
+      expect(error.kind).toBe('invalid-response');
+      expect(error.message).toBe('GitHub API redirect先URLが不正です。');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      expect(fetchSpy.mock.lastCall?.[1]).toEqual(expect.objectContaining({ redirect: 'manual' }));
     });
 
     it('success bodyがmalformed JSONの場合、invalid-responseであること', async () => {
