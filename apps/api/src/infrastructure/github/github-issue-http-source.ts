@@ -51,6 +51,13 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
       );
     }
 
+    if (response.status === 401) {
+      throw new GitHubIssueSourceError(
+        'authentication-failure',
+        'GitHub API authentication failed.',
+      );
+    }
+
     if (response.status === 404 || response.status === 410) {
       throw new GitHubIssueSourceError('not-found', 'GitHub Issue was not found.');
     }
@@ -138,6 +145,10 @@ function parseGitHubIssueResponse(query: GitHubIssueQuery, value: unknown): GitH
     throw invalidResponse('GitHub Issue response must be an object.');
   }
 
+  if ('pull_request' in value) {
+    throw invalidResponse('GitHub Issue response identified a pull request instead of an issue.');
+  }
+
   const number = value.number;
   const title = value.title;
   const body = value.body;
@@ -152,7 +163,7 @@ function parseGitHubIssueResponse(query: GitHubIssueQuery, value: unknown): GitH
     throw invalidResponse('GitHub Issue response body is invalid.');
   }
 
-  if (!isGitHubHtmlUrl(htmlUrl) || !Array.isArray(labels)) {
+  if (!isGitHubIssueHtmlUrl(htmlUrl, query) || !Array.isArray(labels)) {
     throw invalidResponse('GitHub Issue response URL or labels are invalid.');
   }
 
@@ -167,14 +178,21 @@ function parseGitHubIssueResponse(query: GitHubIssueQuery, value: unknown): GitH
   };
 }
 
-function isGitHubHtmlUrl(value: unknown): value is string {
+function isGitHubIssueHtmlUrl(value: unknown, query: GitHubIssueQuery): value is string {
   if (typeof value !== 'string') {
     return false;
   }
 
   try {
     const url = new URL(value);
-    return url.protocol === 'https:' && url.hostname === 'github.com';
+    const expectedPath = `/${query.owner}/${query.repository}/issues/${query.issueNumber}`;
+    return (
+      url.protocol === 'https:' &&
+      url.hostname === 'github.com' &&
+      url.pathname.toLocaleLowerCase('en-US') === expectedPath.toLocaleLowerCase('en-US') &&
+      url.search.length === 0 &&
+      url.hash.length === 0
+    );
   } catch {
     return false;
   }
