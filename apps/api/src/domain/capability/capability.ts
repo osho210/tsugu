@@ -93,8 +93,8 @@ export function parseRequiredCapability(value: unknown): RequiredCapability {
     throw new Error('Required CapabilityのConfidenceは0から1である必要があります。');
   }
 
-  if (typeof rationale !== 'string' || rationale.trim().length === 0) {
-    throw new Error('Required CapabilityのRationaleは空でない文字列である必要があります。');
+  if (typeof rationale !== 'string' || !hasVisibleText(rationale)) {
+    throw new Error('Required CapabilityのRationaleには表示可能な文字が必要です。');
   }
 
   if (!Array.isArray(evidence)) {
@@ -120,20 +120,33 @@ export function parseRequiredCapabilities(value: unknown): readonly RequiredCapa
     throw new Error('Required CapabilityのProvider出力は配列である必要があります。');
   }
 
-  return value.map(parseRequiredCapability);
+  const capabilities: RequiredCapability[] = [];
+
+  for (let index = 0; index < value.length; index += 1) {
+    if (!Object.hasOwn(value, index)) {
+      throw new Error('Required CapabilityのProvider出力に欠損要素を含めることはできません。');
+    }
+
+    capabilities.push(parseRequiredCapability(value[index]));
+  }
+
+  return capabilities;
 }
 
 function normalizeDomain(value: string): string {
+  const generatedSeparator = '\u0000';
+
   return value
     .normalize('NFKC')
     .replace(/\p{Default_Ignorable_Code_Point}/gu, '')
     .trim()
-    .replace(/[ßẞ]/gu, 'ss')
-    .toLocaleLowerCase('en-US')
+    .toLocaleUpperCase('und')
+    .toLocaleLowerCase('und')
     .replace(/\s*([+#./_-])\s*/gu, '$1')
-    .replace(/[^\p{L}\p{M}\p{N}+#./_-]+/gu, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replace(/[^\p{L}\p{M}\p{N}+#./_-]+/gu, generatedSeparator)
+    .replace(new RegExp(`${generatedSeparator}+`, 'g'), generatedSeparator)
+    .replace(new RegExp(`^${generatedSeparator}|${generatedSeparator}$`, 'g'), '')
+    .replaceAll(generatedSeparator, '-');
 }
 
 function parseCapabilityEvidence(value: unknown): CapabilityEvidence {
@@ -148,11 +161,15 @@ function parseCapabilityEvidence(value: unknown): CapabilityEvidence {
     throw new Error('Capability EvidenceのSourceが不正です。');
   }
 
-  if (typeof text !== 'string' || text.trim().length === 0) {
-    throw new Error('Capability EvidenceのTextは空でない文字列である必要があります。');
+  if (typeof text !== 'string' || !hasVisibleText(text)) {
+    throw new Error('Capability EvidenceのTextには表示可能な文字が必要です。');
   }
 
   return { source, text: text.trim() };
+}
+
+function hasVisibleText(value: string): boolean {
+  return value.replace(/\p{Default_Ignorable_Code_Point}/gu, '').trim().length > 0;
 }
 
 function isCapabilityRole(value: unknown): value is CapabilityRole {
