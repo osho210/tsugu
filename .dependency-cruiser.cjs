@@ -137,6 +137,10 @@ module.exports = {
       path: ['node_modules'],
     },
 
+    tsConfig: {
+      fileName: 'apps/api/tsconfig.json',
+    },
+
     enhancedResolveOptions: {
       exportsFields: ['exports'],
       conditionNames: ['import', 'require', 'node', 'default', 'types'],
