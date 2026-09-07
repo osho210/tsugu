@@ -68,7 +68,7 @@ export function parseRequiredCapability(value: unknown): RequiredCapability {
 
   const normalizedDomain = normalizeDomain(domain);
 
-  if (normalizedDomain.length === 0) {
+  if (!/[\p{L}\p{N}]/u.test(normalizedDomain)) {
     throw new Error('Required Capability domain must contain letters or numbers.');
   }
 
@@ -128,7 +128,8 @@ function normalizeDomain(value: string): string {
     .normalize('NFKC')
     .trim()
     .toLocaleLowerCase('en-US')
-    .replace(/[^\p{L}\p{N}+#./_-]+/gu, '-')
+    .replace(/\s*([+#./_-])\s*/gu, '$1')
+    .replace(/[^\p{L}\p{M}\p{N}+#./_-]+/gu, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 }
