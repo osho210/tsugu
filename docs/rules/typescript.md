@@ -16,7 +16,7 @@
 - Name unit tests as `〜の場合、〜であること`; split broad cases or group narrower cases with `describe`.
 - Prefer full-object expectations when a test verifies an object contract. Use partial matching only when the omitted fields are intentionally irrelevant.
 - Reuse generated Prisma types for persistence-layer code when they exactly represent the persistence shape instead of duplicating those types.
-- Keep cross-cutting request normalization such as trimming in Presentation/request-boundary infrastructure rather than repeating it field-by-field in Application or Domain.
+- Normalize request strings only at a Presentation/request boundary that knows the field semantics. Use field-aware DTO transforms or an explicit allowlist for fields where trimming is part of the contract; never apply generic request-wide trimming to opaque or whitespace-significant values such as passwords, tokens, signatures, encoded data, or content whose whitespace can carry meaning.
 - Avoid extracting one-use private helpers that do not represent a separate concept. Put genuinely reusable helpers/guards in an appropriate shared module.
 - After the API alias foundation is available, use `@/` for cross-directory imports so imports do not depend on directory depth. Same-directory imports may remain relative when they improve local readability.
 
