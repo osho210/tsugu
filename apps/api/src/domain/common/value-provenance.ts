@@ -97,10 +97,33 @@ export function resolveEffectiveValue<T>(input: ProvenancedValue<T>): EffectiveV
 }
 
 function normalizeIsoTimestamp(value: string): string | null {
-  const isoTimestamp =
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$/.exec(
+      value,
+    );
 
-  if (!isoTimestamp.test(value)) {
+  if (!match) {
+    return null;
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4]);
+  const minute = Number(match[5]);
+  const second = Number(match[6]);
+  const timezone = match[8];
+
+  if (
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > daysInMonth(year, month) ||
+    hour > 23 ||
+    minute > 59 ||
+    second > 59 ||
+    !isValidTimezoneOffset(timezone)
+  ) {
     return null;
   }
 
@@ -111,4 +134,37 @@ function normalizeIsoTimestamp(value: string): string | null {
   }
 
   return new Date(parsed).toISOString();
+}
+
+function daysInMonth(year: number, month: number): number {
+  switch (month) {
+    case 2:
+      return isLeapYear(year) ? 29 : 28;
+    case 4:
+    case 6:
+    case 9:
+    case 11:
+      return 30;
+    default:
+      return 31;
+  }
+}
+
+function isLeapYear(year: number): boolean {
+  return year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+}
+
+function isValidTimezoneOffset(value: string | undefined): boolean {
+  if (value === 'Z') {
+    return true;
+  }
+
+  if (!value) {
+    return false;
+  }
+
+  const hour = Number(value.slice(1, 3));
+  const minute = Number(value.slice(4, 6));
+
+  return hour <= 23 && minute <= 59;
 }
