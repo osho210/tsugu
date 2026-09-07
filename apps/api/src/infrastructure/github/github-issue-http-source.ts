@@ -60,9 +60,14 @@ export class GitHubIssueHttpSource implements GitHubIssueSource {
     }
 
     if (response.status === 403) {
+      if (isHeaderRateLimitResponse(response)) {
+        await disposeResponseBody(response);
+        throw new GitHubIssueSourceError('rate-limit', 'GitHub APIのrate limitを超過しました。');
+      }
+
       const errorMessage = await readErrorMessage(response);
 
-      if (isHeaderRateLimitResponse(response) || isRateLimitMessage(errorMessage)) {
+      if (isRateLimitMessage(errorMessage)) {
         await disposeResponseBody(response);
         throw new GitHubIssueSourceError('rate-limit', 'GitHub APIのrate limitを超過しました。');
       }
