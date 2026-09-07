@@ -3,7 +3,7 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "builder": "rspack",
+    "builder": "webpack",
     "deleteOutDir": true,
     "tsConfigPath": "tsconfig.build.json"
   }
