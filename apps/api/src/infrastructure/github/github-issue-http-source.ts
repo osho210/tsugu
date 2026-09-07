@@ -178,27 +178,47 @@ function resolveResponseIdentity(response: Response, query: GitHubIssueQuery): G
     return query;
   }
 
+  let url: URL;
+
   try {
-    const url = new URL(response.url);
-    const match = /^\/repos\/([^/]+)\/([^/]+)\/issues\/(\d+)$/.exec(url.pathname);
+    url = new URL(response.url);
+  } catch {
+    return query;
+  }
 
-    if (
-      url.protocol !== 'https:' ||
-      url.hostname !== 'api.github.com' ||
-      match === null ||
-      Number(match[3]) !== query.issueNumber
-    ) {
-      return query;
-    }
+  const match = /^\/repos\/([^/]+)\/([^/]+)\/issues\/(\d+)$/.exec(url.pathname);
 
-    return {
+  if (
+    url.protocol !== 'https:' ||
+    url.hostname !== 'api.github.com' ||
+    match === null ||
+    Number(match[3]) !== query.issueNumber
+  ) {
+    return query;
+  }
+
+  let identity: GitHubIssueQuery;
+
+  try {
+    identity = {
       owner: decodeURIComponent(match[1]),
       repository: decodeURIComponent(match[2]),
       issueNumber: query.issueNumber,
     };
   } catch {
-    return query;
+    throw invalidResponse('GitHub API redirect先のrepository identityが不正です。');
   }
+
+  try {
+    validateGitHubIssueQuery(identity);
+  } catch (error) {
+    if (error instanceof GitHubIssueSourceError && error.kind === 'invalid-input') {
+      throw invalidResponse('GitHub API redirect先のrepository identityが不正です。');
+    }
+    throw error;
+  }
+
+  return identity;
 }
 
 function parseGitHubIssueResponse(query: GitHubIssueQuery, value: unknown): GitHubIssue {
