@@ -35,9 +35,7 @@ export type GitHubIssueSourceErrorKind =
  * GitHub Issue sourceが返す分類済みError。
  */
 export class GitHubIssueSourceError extends Error {
-  /**
-   * Error分類を保持して生成する。
-   */
+  /** Error分類を保持して生成する。 */
   constructor(
     readonly kind: GitHubIssueSourceErrorKind,
     message: string,
@@ -48,9 +46,7 @@ export class GitHubIssueSourceError extends Error {
   }
 }
 
-/**
- * GitHub Issueを取得するApplication Port。
- */
+/** GitHub Issueを取得するApplication Port。 */
 export type GitHubIssueSource = {
   getIssue(query: GitHubIssueQuery): Promise<GitHubIssue>;
 };
@@ -62,33 +58,30 @@ export type GitHubIssueSource = {
  */
 export function validateGitHubIssueQuery(query: GitHubIssueQuery): void {
   if (typeof query !== 'object' || query === null) {
-    throw new GitHubIssueSourceError('invalid-input', 'GitHub issue query must be an object.');
+    throw new GitHubIssueSourceError('invalid-input', 'GitHub Issue queryはオブジェクトである必要があります。');
   }
 
-  const repositoryPart = /^[A-Za-z0-9_.-]+$/;
+  const ownerPattern = /^(?!.*--)[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/;
+  const repositoryPattern = /^(?!\.{1,2}$)[A-Za-z0-9_.-]+$/;
 
-  if (
-    typeof query.owner !== 'string' ||
-    typeof query.repository !== 'string' ||
-    !repositoryPart.test(query.owner) ||
-    !repositoryPart.test(query.repository) ||
-    isDotSegment(query.owner) ||
-    isDotSegment(query.repository)
-  ) {
+  if (typeof query.owner !== 'string' || !ownerPattern.test(query.owner)) {
     throw new GitHubIssueSourceError(
       'invalid-input',
-      'GitHub owner and repository must be valid repository identifiers and must not be dot segments.',
+      'GitHub ownerは1〜39文字の英数字またはハイフンで、先頭末尾のハイフンと連続ハイフンを含まない必要があります。',
+    );
+  }
+
+  if (typeof query.repository !== 'string' || !repositoryPattern.test(query.repository)) {
+    throw new GitHubIssueSourceError(
+      'invalid-input',
+      'GitHub repository名が不正です。',
     );
   }
 
   if (!Number.isSafeInteger(query.issueNumber) || query.issueNumber <= 0) {
     throw new GitHubIssueSourceError(
       'invalid-input',
-      'GitHub issue number must be a positive integer.',
+      'GitHub Issue番号は1以上の安全な整数である必要があります。',
     );
   }
-}
-
-function isDotSegment(value: string): boolean {
-  return value === '.' || value === '..';
 }
