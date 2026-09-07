@@ -145,15 +145,20 @@ export function parseRequiredCapabilities(value: unknown): readonly RequiredCapa
 
 function normalizeDomain(value: string): string {
   const generatedSeparator = '\u0000';
+  const caseFolded = Array.from(
+    value.normalize('NFKC').replace(/\p{Default_Ignorable_Code_Point}/gu, '').trim(),
+  )
+    .map((character) => {
+      if (character === 'ı') {
+        return character;
+      }
 
-  return value
-    .normalize('NFKC')
-    .replace(/\p{Default_Ignorable_Code_Point}/gu, '')
-    .trim()
-    .toLocaleLowerCase('und')
-    .toLocaleUpperCase('und')
-    .toLocaleLowerCase('und')
-    .replaceAll('ς', 'σ')
+      return character.toLocaleUpperCase('und').toLocaleLowerCase('und');
+    })
+    .join('')
+    .replaceAll('ς', 'σ');
+
+  return caseFolded
     .replace(/\s*([+#./_-])\s*/gu, '$1')
     .replace(/[^\p{L}\p{M}\p{N}+#./_-]+/gu, generatedSeparator)
     .replace(new RegExp(`${generatedSeparator}+`, 'g'), generatedSeparator)
@@ -182,7 +187,7 @@ function parseCapabilityEvidence(value: unknown): CapabilityEvidence {
 
 function hasVisibleText(value: string): boolean {
   return value
-    .replace(/[\p{Default_Ignorable_Code_Point}\p{Cc}]/gu, '')
+    .replace(/[\p{Default_Ignorable_Code_Point}\p{Cc}\p{Cf}]/gu, '')
     .trim()
     .length > 0;
 }
