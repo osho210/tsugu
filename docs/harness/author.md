@@ -31,7 +31,7 @@ Before completing the task:
 2. Review the final diff.
 3. Confirm that no unrelated changes were introduced.
 4. Confirm that behavioral changes have appropriate tests.
-5. Confirm reusable Human feedback was checked against analogous active PRs.
+5. When reusable Human feedback has a still-valid underlying invariant, confirm it was checked against analogous active PRs.
 
 ## Guardrails
 
