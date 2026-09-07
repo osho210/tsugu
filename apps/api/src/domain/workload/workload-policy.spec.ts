@@ -67,14 +67,17 @@ describe('WorkloadPolicy', () => {
     ).toBe(expected);
   });
 
-  it('非有限なpercentageをLoad Fitnessへ渡すことを拒否する', () => {
-    expect(() =>
-      calculateLoadFitness({
-        status: 'available',
-        percentage: Number.POSITIVE_INFINITY,
-      }),
-    ).toThrow('Workload percentage must be a finite non-negative number.');
-  });
+  it.each([Number.POSITIVE_INFINITY, -0.0000001])(
+    '不正なpercentage %s をLoad Fitnessへ渡すことを拒否する',
+    (percentage) => {
+      expect(() =>
+        calculateLoadFitness({
+          status: 'available',
+          percentage,
+        }),
+      ).toThrow('Workload percentage must be a finite non-negative number.');
+    },
+  );
 
   it('unavailableはLoad Fitness 0にする', () => {
     expect(calculateLoadFitness({ status: 'unavailable' })).toBe(0);
