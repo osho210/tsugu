@@ -233,6 +233,7 @@ describe('GitHubIssueHttpSource', () => {
     it.each([
       'javascript:alert(1)',
       'https://github.com/settings/tokens',
+      'https://github.com:8443/osho210/tsugu/issues/40',
       'https://github.com/another/repository/issues/40',
       'https://github.com/osho210/tsugu/issues/41',
     ])('html_urlがIssue identityと一致しない%sの場合、invalid-responseであること', async (htmlUrl) => {
