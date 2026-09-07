@@ -59,15 +59,15 @@ export function createHumanOverride<T>(input: {
   const correctedAt = normalizeIsoTimestamp(input.correctedAt);
 
   if (actorId.length === 0) {
-    throw new Error('Human override actorId must not be empty.');
+    throw new Error('Human overrideのactorIdは空でない必要があります。');
   }
 
   if (reason.length === 0) {
-    throw new Error('Human override reason must not be empty.');
+    throw new Error('Human overrideのreasonは空でない必要があります。');
   }
 
   if (correctedAt === null) {
-    throw new Error('Human override correctedAt must be a valid ISO timestamp.');
+    throw new Error('Human overrideのcorrectedAtは有効なISO timestampである必要があります。');
   }
 
   return {
@@ -160,7 +160,7 @@ function isValidTimezoneOffset(value: string | undefined): boolean {
     return true;
   }
 
-  if (!value) {
+  if (!value || value === '-00:00') {
     return false;
   }
 
