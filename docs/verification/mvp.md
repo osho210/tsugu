@@ -27,7 +27,7 @@ pnpm lint
 pnpm architecture
 pnpm check:migration
 pnpm deadCode
-pnpm --filter api typecheck
+pnpm --filter api exec tsc --noEmit
 pnpm --filter api test
 pnpm --filter api build
 pnpm --filter web build
